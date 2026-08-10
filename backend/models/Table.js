@@ -3,8 +3,7 @@ const mongoose = require("mongoose");
 const tableSchema = new mongoose.Schema({
   number: {
     type: Number,
-    required: true,
-    unique: true
+    required: true
   },
 
   capacity: {
@@ -35,5 +34,7 @@ const tableSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+tableSchema.index({ restaurantId: 1, number: 1 }, { unique: true });
 
 module.exports = mongoose.model("Table", tableSchema);

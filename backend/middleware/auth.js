@@ -34,11 +34,6 @@ exports.isManagerOrWaiter = (req, res, next) => {
   return res.status(403).json({ message: "Only manager or waiter allowed" });
 };
 
-exports.isKitchenStaff = (req, res, next) => {
-  if (req.user.role === "chef" || req.user.role === "manager") return next();
-  return res.status(403).json({ message: "Only chef or manager allowed" });
-};
-
 exports.isManagerWaiterChef = (req, res, next) => {
   const allowed = ["manager", "waiter", "chef"];
   if (allowed.includes(req.user.role)) return next();

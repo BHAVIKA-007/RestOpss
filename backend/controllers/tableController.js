@@ -1,5 +1,13 @@
 const Table = require("../models/Table");
 
+const handleDuplicateTableError = (res, err) => {
+  if (err?.code === 11000) {
+    return res.status(400).json({ message: "Table number already exists for this restaurant" });
+  }
+
+  return res.status(500).json({ message: err.message });
+};
+
 // CREATE table
 exports.createTable = async (req, res) => {
   try {
@@ -51,7 +59,7 @@ exports.updateTable = async (req, res) => {
 
     res.json({ message: "Table updated", table });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return handleDuplicateTableError(res, err);
   }
 };
 

@@ -9,6 +9,7 @@ const kitchenRoutes = require("./routes/kitchenRoutes");
 const billingRoutes = require("./routes/billingRoutes");
 const allocationRoutes = require("./routes/allocationRoutes");
 const restaurantRoutes = require("./routes/restaurantRoutes");
+const staffRoutes = require("./routes/staffRoutes");
 
 
 const app = express();
@@ -24,6 +25,7 @@ app.use("/api/kitchen", kitchenRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/allocation", allocationRoutes);
 app.use("/api/restaurants", restaurantRoutes);
+app.use("/api/staff", staffRoutes);
 
 
 app.get("/", (req, res) => {

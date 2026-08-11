@@ -29,6 +29,32 @@ const tableSchema = new mongoose.Schema({
     required: true
   },
 
+  gridX: {
+    type: Number,
+    required: true
+  },
+
+  gridY: {
+    type: Number,
+    required: true
+  },
+
+  shape: {
+    type: String,
+    enum: ["square", "round", "rect"],
+    default: "square"
+  },
+
+  combinable: {
+    type: Boolean,
+    default: false
+  },
+
+  adjacentTo: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Table" }],
+    default: []
+  },
+
   createdAt: {
     type: Date,
     default: Date.now

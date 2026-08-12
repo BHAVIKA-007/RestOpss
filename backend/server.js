@@ -12,6 +12,7 @@ const restaurantRoutes = require("./routes/restaurantRoutes");
 const staffRoutes = require("./routes/staffRoutes");
 const menuRoutes = require("./routes/menuRoutes");
 const floorLayoutRoutes = require("./routes/floorLayoutRoutes");
+const reservationRoutes = require("./routes/reservationRoutes");
 
 
 const app = express();
@@ -30,6 +31,7 @@ app.use("/api/restaurants", restaurantRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/menu", menuRoutes);
 app.use("/api/floor-layout", floorLayoutRoutes);
+app.use("/api/reservations", reservationRoutes);
 
 
 app.get("/", (req, res) => {

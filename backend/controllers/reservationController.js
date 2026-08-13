@@ -2,6 +2,7 @@ const Reservation = require("../models/Reservation");
 const Table = require("../models/Table");
 const reservationService = require("../services/reservationService");
 
+const LOCK_DURATION_MS = 10 * 60 * 1000;
 const NO_SHOW_GRACE_MINUTES = 15;
 
 exports.createReservation = async (req, res) => {
@@ -37,7 +38,7 @@ exports.createReservation = async (req, res) => {
     const overlap = await reservationService.checkTableOverlap(tableIds, timeSlot, dur);
     if (overlap) return res.status(409).json({ message: "One or more selected tables are already reserved for that time" });
 
-    const lockExpiresAt = new Date(Date.now() + 2 * 60 * 1000);
+    const lockExpiresAt = new Date(Date.now() + LOCK_DURATION_MS);
 
     const reservation = await Reservation.create({
       restaurantId,

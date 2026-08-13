@@ -1,7 +1,9 @@
 // server.js
 require("dotenv").config();
 const express = require("express");
+const http = require("http");
 const connectDB = require("./config/db");
+const { initSocket } = require("./services/socketService");
 const userRoutes = require("./routes/userRoutes");
 const tableRoutes = require("./routes/tableRoutes");
 const orderRoutes = require("./routes/orderRoutes");
@@ -14,8 +16,9 @@ const menuRoutes = require("./routes/menuRoutes");
 const floorLayoutRoutes = require("./routes/floorLayoutRoutes");
 const reservationRoutes = require("./routes/reservationRoutes");
 
-
 const app = express();
+const server = http.createServer(app);
+
 app.use(express.json());
 
 // connect to DB
@@ -33,10 +36,11 @@ app.use("/api/menu", menuRoutes);
 app.use("/api/floor-layout", floorLayoutRoutes);
 app.use("/api/reservations", reservationRoutes);
 
-
 app.get("/", (req, res) => {
   res.send("Restaurant Management API Running...");
 });
 
+initSocket(server);
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

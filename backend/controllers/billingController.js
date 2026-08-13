@@ -1,5 +1,6 @@
 const Order = require("../models/Order");
 const Table = require("../models/Table");
+const { emitToRestaurant } = require("../services/socketService");
 
 // Get unpaid completed orders
 exports.getPendingBills = async (req, res) => {
@@ -34,6 +35,12 @@ exports.markPaid = async (req, res) => {
       table.status = "available";
       table.currentOrder = null;
       await table.save();
+
+      emitToRestaurant(table.restaurantId.toString(), "table:statusChanged", {
+        tableId: table._id.toString(),
+        restaurantId: table.restaurantId.toString(),
+        status: table.status
+      });
     }
 
     res.json({ message: "Payment successful", order });

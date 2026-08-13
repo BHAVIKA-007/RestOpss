@@ -1,5 +1,6 @@
 const Table = require("../models/Table");
 const WaitingQueue = require("../models/WaitingQueue");
+const { emitToRestaurant } = require("./socketService");
 
 /*
   NORMAL ALLOCATION
@@ -17,6 +18,12 @@ exports.allocateTableService = async (groupSize) => {
   if (table) {
     table.status = "occupied";
     await table.save();
+
+    emitToRestaurant(table.restaurantId.toString(), "table:statusChanged", {
+      tableId: table._id.toString(),
+      restaurantId: table.restaurantId.toString(),
+      status: table.status
+    });
 
     return {
       status: "allocated",
@@ -61,6 +68,12 @@ exports.freeTableService = async (tableId) => {
   table.status = "available";
   await table.save();
 
+  emitToRestaurant(table.restaurantId.toString(), "table:statusChanged", {
+    tableId: table._id.toString(),
+    restaurantId: table.restaurantId.toString(),
+    status: table.status
+  });
+
   const waitingList = await WaitingQueue.find({
     status: "waiting"
   }).sort({ createdAt: 1 });
@@ -74,6 +87,12 @@ exports.freeTableService = async (tableId) => {
     if (suitableTable) {
       suitableTable.status = "occupied";
       await suitableTable.save();
+
+      emitToRestaurant(suitableTable.restaurantId.toString(), "table:statusChanged", {
+        tableId: suitableTable._id.toString(),
+        restaurantId: suitableTable.restaurantId.toString(),
+        status: suitableTable.status
+      });
 
       group.status = "allocated";
       await group.save();
@@ -133,6 +152,12 @@ exports.managerOverrideAllocate = async (groupSize) => {
   for (let t of selected) {
     t.status = "occupied";
     await t.save();
+
+    emitToRestaurant(t.restaurantId.toString(), "table:statusChanged", {
+      tableId: t._id.toString(),
+      restaurantId: t.restaurantId.toString(),
+      status: t.status
+    });
   }
 
   return {

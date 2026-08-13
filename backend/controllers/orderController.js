@@ -1,5 +1,6 @@
 const Order = require("../models/Order");
 const Table = require("../models/Table");
+const { emitToRestaurant } = require("../services/socketService");
 
 // Create Order
 exports.createOrder = async (req, res) => {
@@ -32,6 +33,12 @@ exports.createOrder = async (req, res) => {
     tableExists.status = "occupied";
     tableExists.currentOrder = order._id;
     await tableExists.save();
+
+    emitToRestaurant(tableExists.restaurantId.toString(), "table:statusChanged", {
+      tableId: tableExists._id.toString(),
+      restaurantId: tableExists.restaurantId.toString(),
+      status: tableExists.status
+    });
 
     res.status(201).json({
       message: "Order created",
@@ -68,6 +75,12 @@ exports.updateStatus = async (req, res) => {
       table.status = "available";
       table.currentOrder = null;
       await table.save();
+
+      emitToRestaurant(table.restaurantId.toString(), "table:statusChanged", {
+        tableId: table._id.toString(),
+        restaurantId: table.restaurantId.toString(),
+        status: table.status
+      });
     }
 
     res.json({ message: "Order updated", order });

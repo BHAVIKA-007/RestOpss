@@ -1,6 +1,7 @@
 const Reservation = require("../models/Reservation");
 const Table = require("../models/Table");
 const reservationService = require("../services/reservationService");
+const { emitToRestaurant } = require("../services/socketService");
 
 const LOCK_DURATION_MS = 10 * 60 * 1000;
 const NO_SHOW_GRACE_MINUTES = 15;
@@ -51,6 +52,13 @@ exports.createReservation = async (req, res) => {
       lockExpiresAt
     });
 
+    emitToRestaurant(restaurantId, "reservation:locked", {
+      reservationId: reservation._id.toString(),
+      restaurantId: reservation.restaurantId.toString(),
+      tableIds: reservation.tables.map(table => table.toString()),
+      timeSlot: reservation.timeSlot
+    });
+
     res.status(201).json({ message: "Reservation created", _id: reservation._id, lockExpiresAt: reservation.lockExpiresAt });
   } catch (err) {
     if (err?.name === "ValidationError") return res.status(400).json({ message: err.message });
@@ -79,7 +87,27 @@ exports.confirmReservation = async (req, res) => {
 
     reservation.status = "confirmed";
     reservation.lockExpiresAt = null;
-    await reservation.save();
+    reservation.lockedTableSlots = Reservation.getLockedTableSlots({
+      tables: reservation.tables,
+      timeSlot: reservation.timeSlot,
+      durationMinutes: reservation.durationMinutes
+    });
+
+    try {
+      await reservation.save();
+    } catch (err) {
+      if (err?.code === 11000 && err?.keyPattern && err.keyPattern.lockedTableSlots) {
+        return res.status(409).json({ message: "This table was just booked by someone else, please try a different time or table" });
+      }
+      throw err;
+    }
+
+    emitToRestaurant(reservation.restaurantId.toString(), "reservation:confirmed", {
+      reservationId: reservation._id.toString(),
+      restaurantId: reservation.restaurantId.toString(),
+      tableIds: reservation.tables.map(table => table.toString()),
+      timeSlot: reservation.timeSlot
+    });
 
     res.json({ message: "Reservation confirmed", reservation });
   } catch (err) {
@@ -111,7 +139,28 @@ exports.cancelReservation = async (req, res) => {
     }
 
     reservation.status = "cancelled";
+    reservation.lockExpiresAt = null;
+    reservation.lockedTableSlots = [];
     await reservation.save();
+
+    const tables = await Table.find({ _id: { $in: reservation.tables } });
+    await Promise.all(tables.map(async (table) => {
+      table.status = "available";
+      table.currentOrder = null;
+      await table.save();
+
+      emitToRestaurant(table.restaurantId.toString(), "table:statusChanged", {
+        tableId: table._id.toString(),
+        restaurantId: table.restaurantId.toString(),
+        status: table.status
+      });
+    }));
+
+    emitToRestaurant(reservation.restaurantId.toString(), "reservation:cancelled", {
+      reservationId: reservation._id.toString(),
+      restaurantId: reservation.restaurantId.toString(),
+      tableIds: reservation.tables.map(table => table.toString())
+    });
 
     res.json({ message: "Reservation cancelled", reservation });
   } catch (err) {
@@ -142,6 +191,12 @@ exports.seatReservation = async (req, res) => {
     await Promise.all(tables.map(async (t) => {
       t.status = "occupied";
       await t.save();
+
+      emitToRestaurant(t.restaurantId.toString(), "table:statusChanged", {
+        tableId: t._id.toString(),
+        restaurantId: t.restaurantId.toString(),
+        status: t.status
+      });
     }));
 
     res.json({ message: "Reservation seated", reservation });
@@ -160,6 +215,8 @@ exports.completeReservation = async (req, res) => {
     if (reservation.status !== "seated") return res.status(400).json({ message: "Only seated reservations can be completed" });
 
     reservation.status = "completed";
+    reservation.lockExpiresAt = null;
+    reservation.lockedTableSlots = [];
     await reservation.save();
 
     // free tables
@@ -168,6 +225,12 @@ exports.completeReservation = async (req, res) => {
       t.status = "available";
       t.currentOrder = null;
       await t.save();
+
+      emitToRestaurant(t.restaurantId.toString(), "table:statusChanged", {
+        tableId: t._id.toString(),
+        restaurantId: t.restaurantId.toString(),
+        status: t.status
+      });
     }));
 
     res.json({ message: "Reservation completed", reservation });
@@ -191,6 +254,8 @@ exports.markNoShow = async (req, res) => {
     }
 
     reservation.status = "no_show";
+    reservation.lockExpiresAt = null;
+    reservation.lockedTableSlots = [];
     await reservation.save();
 
     // free tables
@@ -199,7 +264,19 @@ exports.markNoShow = async (req, res) => {
       t.status = "available";
       t.currentOrder = null;
       await t.save();
+
+      emitToRestaurant(t.restaurantId.toString(), "table:statusChanged", {
+        tableId: t._id.toString(),
+        restaurantId: t.restaurantId.toString(),
+        status: t.status
+      });
     }));
+
+    emitToRestaurant(reservation.restaurantId.toString(), "reservation:cancelled", {
+      reservationId: reservation._id.toString(),
+      restaurantId: reservation.restaurantId.toString(),
+      tableIds: reservation.tables.map(table => table.toString())
+    });
 
     res.json({ message: "Reservation marked as no-show", reservation });
   } catch (err) {

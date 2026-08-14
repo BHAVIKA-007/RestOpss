@@ -71,6 +71,11 @@ const reservationSchema = new mongoose.Schema({
     default: "locked"
   },
 
+  requiresApproval: {
+    type: Boolean,
+    default: false
+  },
+
   lockExpiresAt: {
     type: Date,
     default: null

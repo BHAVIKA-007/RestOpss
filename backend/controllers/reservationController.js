@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Reservation = require("../models/Reservation");
 const Table = require("../models/Table");
 const reservationService = require("../services/reservationService");
@@ -14,32 +15,28 @@ exports.createReservation = async (req, res) => {
       return res.status(400).json({ message: "tableIds must be a non-empty array" });
     }
 
-    // load tables
     const tables = await Table.find({ _id: { $in: tableIds } });
     if (tables.length !== tableIds.length) {
       return res.status(400).json({ message: "One or more tables not found" });
     }
 
-    // ensure all tables belong to the requested restaurant
     for (const t of tables) {
       if (t.restaurantId.toString() !== restaurantId) {
         return res.status(400).json({ message: "All tables must belong to the provided restaurantId" });
       }
     }
 
-    // capacity check
     const combinedCapacity = tables.reduce((s, t) => s + (t.capacity || 0), 0);
     if (!partySize || partySize < 1 || partySize > combinedCapacity) {
       return res.status(400).json({ message: "partySize must be >=1 and not exceed combined table capacity" });
     }
 
     const dur = durationMinutes || 90;
-
-    // overlap check against confirmed/seated reservations
     const overlap = await reservationService.checkTableOverlap(tableIds, timeSlot, dur);
     if (overlap) return res.status(409).json({ message: "One or more selected tables are already reserved for that time" });
 
     const lockExpiresAt = new Date(Date.now() + LOCK_DURATION_MS);
+    const requiresApproval = tableIds.length > 1;
 
     const reservation = await Reservation.create({
       restaurantId,
@@ -49,20 +46,75 @@ exports.createReservation = async (req, res) => {
       timeSlot,
       durationMinutes: dur,
       status: "locked",
+      requiresApproval,
       lockExpiresAt
     });
 
-    emitToRestaurant(restaurantId, "reservation:locked", {
-      reservationId: reservation._id.toString(),
-      restaurantId: reservation.restaurantId.toString(),
-      tableIds: reservation.tables.map(table => table.toString()),
-      timeSlot: reservation.timeSlot
-    });
+    if (requiresApproval) {
+      emitToRestaurant(restaurantId, "reservation:approvalNeeded", {
+        reservationId: reservation._id.toString(),
+        restaurantId: reservation.restaurantId.toString(),
+        tableIds: reservation.tables.map((table) => table.toString()),
+        partySize: reservation.partySize,
+        timeSlot: reservation.timeSlot
+      });
+    } else {
+      emitToRestaurant(restaurantId, "reservation:locked", {
+        reservationId: reservation._id.toString(),
+        restaurantId: reservation.restaurantId.toString(),
+        tableIds: reservation.tables.map((table) => table.toString()),
+        timeSlot: reservation.timeSlot
+      });
+    }
 
-    res.status(201).json({ message: "Reservation created", _id: reservation._id, lockExpiresAt: reservation.lockExpiresAt });
+    res.status(201).json({ message: "Reservation created", _id: reservation._id, lockExpiresAt: reservation.lockExpiresAt, requiresApproval });
   } catch (err) {
     if (err?.name === "ValidationError") return res.status(400).json({ message: err.message });
     res.status(500).json({ message: err.message });
+  }
+};
+
+exports.suggestCombination = async (req, res) => {
+  try {
+    const { restaurantId, partySize, timeSlot, durationMinutes } = req.query;
+
+    if (!restaurantId || !restaurantId.toString().trim()) {
+      return res.status(400).json({ message: "restaurantId query parameter is required" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(restaurantId.toString())) {
+      return res.status(400).json({ message: "Invalid restaurantId" });
+    }
+
+    const parsedPartySize = Number(partySize);
+    if (!partySize || !Number.isInteger(parsedPartySize) || parsedPartySize < 1) {
+      return res.status(400).json({ message: "partySize must be a positive integer" });
+    }
+
+    if (!timeSlot) {
+      return res.status(400).json({ message: "timeSlot query parameter is required" });
+    }
+
+    const requestedTime = new Date(timeSlot);
+    if (Number.isNaN(requestedTime.getTime())) {
+      return res.status(400).json({ message: "timeSlot must be a valid date string" });
+    }
+
+    const requestedDuration = durationMinutes === undefined ? 90 : Number(durationMinutes);
+    if (!Number.isFinite(requestedDuration) || requestedDuration <= 0) {
+      return res.status(400).json({ message: "durationMinutes must be a positive number" });
+    }
+
+    const candidates = await reservationService.findTableCombinations(
+      restaurantId.toString(),
+      parsedPartySize,
+      requestedTime,
+      requestedDuration
+    );
+
+    return res.json(candidates);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
   }
 };
 
@@ -75,13 +127,16 @@ exports.confirmReservation = async (req, res) => {
       return res.status(403).json({ message: "Only the reserving customer can confirm this reservation" });
     }
 
+    if (reservation.requiresApproval && reservation.status === "locked") {
+      return res.status(403).json({ message: "This booking requires host approval before it can be confirmed" });
+    }
+
     if (reservation.status !== "locked") return res.status(400).json({ message: "Reservation is not in locked state" });
 
     if (!reservation.lockExpiresAt || reservation.lockExpiresAt.getTime() < Date.now()) {
       return res.status(410).json({ message: "Reservation lock expired; please create a new reservation" });
     }
 
-    // re-check overlap excluding this reservation
     const overlap = await reservationService.checkTableOverlap(reservation.tables, reservation.timeSlot, reservation.durationMinutes, reservation._id);
     if (overlap) return res.status(409).json({ message: "One or more selected tables are already reserved for that time" });
 
@@ -105,11 +160,76 @@ exports.confirmReservation = async (req, res) => {
     emitToRestaurant(reservation.restaurantId.toString(), "reservation:confirmed", {
       reservationId: reservation._id.toString(),
       restaurantId: reservation.restaurantId.toString(),
-      tableIds: reservation.tables.map(table => table.toString()),
+      tableIds: reservation.tables.map((table) => table.toString()),
       timeSlot: reservation.timeSlot
     });
 
     res.json({ message: "Reservation confirmed", reservation });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.approveReservation = async (req, res) => {
+  try {
+    const reservation = await Reservation.findById(req.params.id);
+    if (!reservation) return res.status(404).json({ message: "Reservation not found" });
+
+    if (!reservation.requiresApproval) {
+      return res.status(400).json({ message: "This reservation does not require approval" });
+    }
+
+    if (reservation.status !== "locked") {
+      return res.status(400).json({ message: "Only locked reservations can be approved" });
+    }
+
+    if (!req.user.restaurantId || req.user.restaurantId.toString() !== reservation.restaurantId.toString()) {
+      return res.status(403).json({ message: "Cannot operate on reservations for another restaurant" });
+    }
+
+    const overlap = await reservationService.checkTableOverlap(reservation.tables, reservation.timeSlot, reservation.durationMinutes, reservation._id);
+    if (overlap) return res.status(409).json({ message: "One or more selected tables are already reserved for that time" });
+
+    reservation.requiresApproval = false;
+    reservation.lockExpiresAt = new Date(Date.now() + LOCK_DURATION_MS);
+    await reservation.save();
+
+    res.json({ message: "Reservation approved", reservation });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.rejectReservation = async (req, res) => {
+  try {
+    const reservation = await Reservation.findById(req.params.id);
+    if (!reservation) return res.status(404).json({ message: "Reservation not found" });
+
+    if (!reservation.requiresApproval) {
+      return res.status(400).json({ message: "This reservation does not require approval" });
+    }
+
+    if (reservation.status !== "locked") {
+      return res.status(400).json({ message: "Only locked reservations can be rejected" });
+    }
+
+    if (!req.user.restaurantId || req.user.restaurantId.toString() !== reservation.restaurantId.toString()) {
+      return res.status(403).json({ message: "Cannot operate on reservations for another restaurant" });
+    }
+
+    reservation.requiresApproval = false;
+    reservation.status = "cancelled";
+    reservation.lockExpiresAt = null;
+    reservation.lockedTableSlots = [];
+    await reservation.save();
+
+    emitToRestaurant(reservation.restaurantId.toString(), "reservation:cancelled", {
+      reservationId: reservation._id.toString(),
+      restaurantId: reservation.restaurantId.toString(),
+      tableIds: reservation.tables.map((table) => table.toString())
+    });
+
+    res.json({ message: "Reservation rejected", reservation });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -159,7 +279,7 @@ exports.cancelReservation = async (req, res) => {
     emitToRestaurant(reservation.restaurantId.toString(), "reservation:cancelled", {
       reservationId: reservation._id.toString(),
       restaurantId: reservation.restaurantId.toString(),
-      tableIds: reservation.tables.map(table => table.toString())
+      tableIds: reservation.tables.map((table) => table.toString())
     });
 
     res.json({ message: "Reservation cancelled", reservation });
@@ -168,7 +288,6 @@ exports.cancelReservation = async (req, res) => {
   }
 };
 
-// Helper to ensure acting staff belongs to same restaurant
 const ensureSameRestaurant = (req, reservation) => {
   if (!req.user.restaurantId) return false;
   return req.user.restaurantId.toString() === reservation.restaurantId.toString();
@@ -186,7 +305,6 @@ exports.seatReservation = async (req, res) => {
     reservation.status = "seated";
     await reservation.save();
 
-    // mark tables occupied
     const tables = await Table.find({ _id: { $in: reservation.tables } });
     await Promise.all(tables.map(async (t) => {
       t.status = "occupied";
@@ -219,7 +337,6 @@ exports.completeReservation = async (req, res) => {
     reservation.lockedTableSlots = [];
     await reservation.save();
 
-    // free tables
     const tables = await Table.find({ _id: { $in: reservation.tables } });
     await Promise.all(tables.map(async (t) => {
       t.status = "available";
@@ -258,7 +375,6 @@ exports.markNoShow = async (req, res) => {
     reservation.lockedTableSlots = [];
     await reservation.save();
 
-    // free tables
     const tables = await Table.find({ _id: { $in: reservation.tables } });
     await Promise.all(tables.map(async (t) => {
       t.status = "available";
@@ -275,7 +391,7 @@ exports.markNoShow = async (req, res) => {
     emitToRestaurant(reservation.restaurantId.toString(), "reservation:cancelled", {
       reservationId: reservation._id.toString(),
       restaurantId: reservation.restaurantId.toString(),
-      tableIds: reservation.tables.map(table => table.toString())
+      tableIds: reservation.tables.map((table) => table.toString())
     });
 
     res.json({ message: "Reservation marked as no-show", reservation });

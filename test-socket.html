@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+  const socket = io("http://localhost:5000");
+
+  socket.on("connect", () => {
+    console.log("Connected:", socket.id);
+
+    socket.emit("joinRestaurant", "6a7896cad962cb7b9df6a3d3");
+
+    console.log("Joined restaurant room");
+  });
+
+  socket.on("reservation:locked", (data) => {
+    console.log("reservation:locked", data);
+  });
+
+  socket.on("reservation:confirmed", (data) => {
+    console.log("reservation:confirmed", data);
+  });
+
+  socket.on("reservation:cancelled", (data) => {
+    console.log("reservation:cancelled", data);
+  });
+
+  socket.on("table:statusChanged", (data) => {
+    console.log("table:statusChanged", data);
+  });
+</script>
+</body>
+</html>

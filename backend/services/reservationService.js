@@ -1,5 +1,13 @@
 const Reservation = require("../models/Reservation");
 
+console.log(
+  "Loaded Reservation model from:",
+  require.resolve("../models/Reservation")
+);
+
+console.log("Reservation:", Reservation);
+console.log("Reservation.find:", typeof Reservation.find);
+console.log("Reservation.findById:", typeof Reservation.findById);
 /**
  * Check if any existing confirmed/seated reservation on the given tables
  * overlaps with the requested time window.

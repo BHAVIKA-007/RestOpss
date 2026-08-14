@@ -91,12 +91,10 @@ reservationSchema.statics.getLockedTableSlots = function ({ tables, timeSlot, du
   return buildLockedTableSlots({ tables, timeSlot, durationMinutes });
 };
 
-reservationSchema.pre("save", function (next) {
+reservationSchema.pre("save", function () {
   if (!["confirmed", "seated"].includes(this.status)) {
     this.lockedTableSlots = [];
   }
-
-  next();
 });
 
 reservationSchema.index(

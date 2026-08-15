@@ -70,5 +70,25 @@ exports.isWaiter = (req, res, next) => {
   }
 };
 
+exports.isHost = (req, res, next) => {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+  if (req.user.role !== "host") {
+    return res.status(403).json({ message: "Only host can perform this action" });
+  }
+
+  next();
+};
+
+exports.isManagerOrHost = (req, res, next) => {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+  if (req.user.role === "manager" || req.user.role === "host") {
+    return next();
+  }
+
+  return res.status(403).json({ message: "Only manager or host allowed" });
+};
+
 
 

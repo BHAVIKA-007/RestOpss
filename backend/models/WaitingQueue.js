@@ -1,15 +1,37 @@
 const mongoose = require("mongoose");
 
 const waitingSchema = new mongoose.Schema({
+  restaurantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Restaurant",
+    required: true
+  },
+
   groupSize: {
     type: Number,
     required: true
   },
 
+  customer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null
+  },
+
   status: {
     type: String,
-    enum: ["waiting", "allocated", "cancelled"],
+    enum: ["waiting", "notified", "allocated", "cancelled", "expired"],
     default: "waiting"
+  },
+
+  notifiedAt: {
+    type: Date,
+    default: null
+  },
+
+  responseDeadline: {
+    type: Date,
+    default: null
   },
 
   createdAt: {

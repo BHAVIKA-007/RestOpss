@@ -9,7 +9,7 @@ const {
 
 const WaitingQueue = require("../models/WaitingQueue");
 const Table = require("../models/Table");
-const { emitToRestaurant } = require("./socketService");
+const { emitToRestaurant } = require("../services/socketService");
 
 const WAITLIST_RESPONSE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 

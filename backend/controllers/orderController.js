@@ -11,6 +11,10 @@ exports.createOrder = async (req, res) => {
     if (!tableExists)
       return res.status(404).json({ message: "Table not found" });
 
+    if (req.user.restaurantId && tableExists.restaurantId.toString() !== req.user.restaurantId.toString()) {
+      return res.status(403).json({ message: "Cannot create an order for another restaurant" });
+    }
+
     // Calculate total
     let total = 0;
     items.forEach(item => {
@@ -23,6 +27,7 @@ exports.createOrder = async (req, res) => {
     const order = await Order.create({
       table,
       customer,
+      restaurantId: tableExists.restaurantId,
       items,
       totalAmount: total,
       taxAmount: tax,
@@ -53,8 +58,14 @@ exports.createOrder = async (req, res) => {
 
 // Get all orders
 exports.getOrders = async (req, res) => {
-  const orders = await Order.find().populate("table").populate("customer");
-  res.json(orders);
+  try {
+    const orders = await Order.find({ restaurantId: req.user.restaurantId })
+      .populate("table")
+      .populate("customer");
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
 
@@ -66,22 +77,12 @@ exports.updateStatus = async (req, res) => {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
+    if (order.restaurantId.toString() !== req.user.restaurantId?.toString()) {
+      return res.status(403).json({ message: "Cannot operate on an order from another restaurant" });
+    }
+
     order.status = status;
     await order.save();
-
-    // If completed → free table
-    if (status === "completed") {
-      const table = await Table.findById(order.table);
-      table.status = "available";
-      table.currentOrder = null;
-      await table.save();
-
-      emitToRestaurant(table.restaurantId.toString(), "table:statusChanged", {
-        tableId: table._id.toString(),
-        restaurantId: table.restaurantId.toString(),
-        status: table.status
-      });
-    }
 
     res.json({ message: "Order updated", order });
 
@@ -93,11 +94,19 @@ exports.updateStatus = async (req, res) => {
 
 // Get Single Order
 exports.getOrder = async (req, res) => {
-  const order = await Order.findById(req.params.id)
-    .populate("table")
-    .populate("customer");
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate("table")
+      .populate("customer");
 
-  if (!order) return res.status(404).json({ message: "Order not found" });
+    if (!order) return res.status(404).json({ message: "Order not found" });
 
-  res.json(order);
+    if (order.restaurantId.toString() !== req.user.restaurantId?.toString()) {
+      return res.status(403).json({ message: "Cannot view an order from another restaurant" });
+    }
+
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };

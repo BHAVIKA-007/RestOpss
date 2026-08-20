@@ -2,11 +2,16 @@ const Order = require("../models/Order");
 
 // Get orders for kitchen
 exports.getKitchenOrders = async (req, res) => {
-  const orders = await Order.find({
-    status: { $in: ["pending", "preparing"] }
-  }).populate("table");
+  try {
+    const orders = await Order.find({
+      restaurantId: req.user.restaurantId,
+      status: { $in: ["pending", "preparing"] }
+    }).populate("table");
 
-  res.json(orders);
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
 
@@ -21,6 +26,10 @@ exports.updateKitchenStatus = async (req, res) => {
 
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });
+
+    if (order.restaurantId.toString() !== req.user.restaurantId?.toString()) {
+      return res.status(403).json({ message: "Cannot operate on an order from another restaurant" });
+    }
 
     order.status = status;
     await order.save();

@@ -4,12 +4,17 @@ const { emitToRestaurant } = require("../services/socketService");
 
 // Get unpaid completed orders
 exports.getPendingBills = async (req, res) => {
-  const orders = await Order.find({
-    status: "completed",
-    paidStatus: "unpaid"
-  }).populate("table");
+  try {
+    const orders = await Order.find({
+      restaurantId: req.user.restaurantId,
+      status: "completed",
+      paidStatus: "unpaid"
+    }).populate("table");
 
-  res.json(orders);
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
 
@@ -20,6 +25,10 @@ exports.markPaid = async (req, res) => {
 
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });
+
+    if (order.restaurantId.toString() !== req.user.restaurantId?.toString()) {
+      return res.status(403).json({ message: "Cannot pay an order from another restaurant" });
+    }
 
     if (order.paidStatus === "paid")
       return res.status(400).json({ message: "Bill is already paid" });

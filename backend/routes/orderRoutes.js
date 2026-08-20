@@ -13,9 +13,18 @@ const {
   isManagerOrWaiter,
   isManagerWaiterChef
 } = require("../middleware/auth");
+const {
+  createCustomerOrder,
+  getMyOrders,
+  getMyOrder
+} = require("../controllers/customerOrderController");
 
 // Create order → Manager + Waiter
 router.post("/", auth, isManagerOrWaiter, createOrder);
+
+router.post("/mine", auth, createCustomerOrder);
+router.get("/mine", auth, getMyOrders);
+router.get("/mine/:id", auth, getMyOrder);
 
 // Get all orders → Manager + Waiter + Chef
 router.get("/", auth, isManagerWaiterChef, getOrders);

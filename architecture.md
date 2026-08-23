@@ -2,7 +2,7 @@
 
 ```markdown
 # RestOps Architecture
-
+## this is old one, needs to be updated
 ## 1. Project Overview
 RestOps is a Node.js/Express backend for restaurant operations management, backed by MongoDB via Mongoose. It covers user authentication, table management, table allocation with a FIFO waiting queue, order lifecycle, kitchen workflow, and billing/payment. This repository contains **backend only** — no frontend/client code is present.
 

@@ -19,6 +19,26 @@ exports.auth = async (req, res, next) => {
   }
 };
 
+exports.isOwnerOrManager = (req, res, next) => {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+  if (req.user.role === "owner" || req.user.role === "manager") {
+    return next();
+  }
+
+  return res.status(403).json({ message: "Only owner or manager can perform this action" });
+};
+
+exports.isOwner = (req, res, next) => {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+  if (req.user.role !== "owner") {
+    return res.status(403).json({ message: "Only owner can perform this action" });
+  }
+
+  next();
+};
+
 exports.isManager = (req, res, next) => {
   if (!req.user) return res.status(401).json({ message: "Unauthorized" });
 
@@ -89,6 +109,7 @@ exports.isManagerOrHost = (req, res, next) => {
 
   return res.status(403).json({ message: "Only manager or host allowed" });
 };
+
 
 
 

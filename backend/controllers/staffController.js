@@ -6,8 +6,18 @@ exports.createStaff = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
+    // Only managers can create staff, not owners
+    if (req.user.role !== "manager") {
+      return res.status(403).json({ message: "Only managers can create staff" });
+    }
+
     if (!req.user?.restaurantId) {
-      return res.status(400).json({ message: "You must own a restaurant first" });
+      return res.status(400).json({ message: "You must be a manager of a restaurant to create staff" });
+    }
+
+    // Prevent creating manager accounts (managers can only create staff)
+    if (role === "manager") {
+      return res.status(400).json({ message: "Managers cannot create other managers" });
     }
 
     if (!staffRoles.includes(role)) {
@@ -76,7 +86,7 @@ exports.deleteStaff = async (req, res) => {
       return res.status(403).json({ message: "You can only remove staff from your own restaurant" });
     }
 
-    if (targetUser.role === "customer" || targetUser.role === "manager") {
+    if (targetUser.role === "customer" || targetUser.role === "manager" || targetUser.role === "owner") {
       return res.status(400).json({ message: "Only staff accounts can be removed" });
     }
 

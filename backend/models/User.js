@@ -7,7 +7,7 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, required: true, minlength: 6 },
   role: {
     type: String,
-    enum: ["customer", "waiter", "chef", "cashier", "host", "manager"],
+    enum: ["customer", "owner", "waiter", "chef", "cashier", "host", "manager"],
     default: "customer"
   },
   phone: { type: String },
@@ -17,6 +17,11 @@ const UserSchema = new mongoose.Schema({
     required: function () {
       return ["waiter", "chef", "cashier", "host", "manager"].includes(this.role);
     }
+  },
+  managedRestaurantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Restaurant",
+    default: null
   },
   createdAt: { type: Date, default: Date.now }
 });

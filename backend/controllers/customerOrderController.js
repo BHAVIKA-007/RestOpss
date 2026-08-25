@@ -120,3 +120,15 @@ exports.getMyOrder = async (req, res) => {
     return res.status(500).json({ message: err.message });
   }
 };
+
+exports.confirmReceived = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (!order.customer) return res.status(400).json({ message: "Walk-in orders cannot be confirmed by a customer" });
+    if (order.customer.toString() !== req.user._id.toString()) return res.status(403).json({ message: "You can only confirm your own order" });
+    order.customerConfirmedAt = new Date();
+    await order.save();
+    return res.json({ message: "Order receipt confirmed", order });
+  } catch (err) { return res.status(500).json({ message: err.message }); }
+};

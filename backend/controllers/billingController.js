@@ -39,10 +39,13 @@ exports.markPaid = async (req, res) => {
     await order.save();
 
     // Free table just in case
-    const table = await Table.findById(order.table);
-    if (table) {
+    const tables = order.combinedGroupId
+      ? await Table.find({ combinedGroupId: order.combinedGroupId })
+      : await Table.find({ _id: order.table });
+    for (const table of tables) {
       table.status = "available";
       table.currentOrder = null;
+      table.combinedGroupId = null;
       await table.save();
 
       emitToRestaurant(table.restaurantId.toString(), "table:statusChanged", {

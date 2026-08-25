@@ -7,7 +7,7 @@ const WAITLIST_RESPONSE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 /*
   NORMAL ALLOCATION
 */
-exports.allocateTableService = async (groupSize, restaurantId, customerId = null) => {
+exports.allocateTableService = async (groupSize, restaurantId, customerId = null, guestName = null, guestPhone = null) => {
   if (!groupSize || groupSize <= 0)
     throw new Error("Invalid group size");
   if (!restaurantId)
@@ -52,7 +52,9 @@ exports.allocateTableService = async (groupSize, restaurantId, customerId = null
   const entry = await WaitingQueue.create({ 
     restaurantId,
     groupSize,
-    customer: customerId || null
+    customer: customerId || null,
+    guestName: guestName || null,
+    guestPhone: guestPhone || null
   });
 
   const position = await WaitingQueue.countDocuments({
@@ -123,7 +125,8 @@ exports.freeTableService = async (tableId, restaurantId) => {
         notified: true,
         waitingQueueId: group._id,
         tableId: table._id,
-        responseDeadlineMs: group.responseDeadline.getTime()
+        responseDeadlineMs: group.responseDeadline.getTime(),
+        notificationChannel: group.notificationChannel
       };
     }
     // If not compatible, continue to next entry (don't stop here)
@@ -181,7 +184,8 @@ exports.allocateFromWaitlistForTable = async (tableId, restaurantId) => {
         allocated: true,
         groupId: group._id,
         tableId: table._id,
-        status: "notified"
+        status: "notified",
+        notificationChannel: group.notificationChannel
       };
     }
   }
@@ -225,6 +229,7 @@ exports.viewWaitingQueueWithPosition = async (restaurantId) => {
 
     return {
       ...entry.toObject(),
+      displayName: entry.customer ? undefined : (entry.guestName || "Walk-in guest"),
       position,
       waitingSinceMinutes
     };
@@ -265,8 +270,11 @@ exports.managerOverrideAllocate = async (groupSize, restaurantId) => {
     };
   }
 
+  const mongoose = require("mongoose");
+  const combinedGroupId = new mongoose.Types.ObjectId();
   for (let t of selected) {
     t.status = "occupied";
+    t.combinedGroupId = combinedGroupId;
     await t.save();
 
     emitToRestaurant(t.restaurantId.toString(), "table:statusChanged", {
@@ -278,6 +286,7 @@ exports.managerOverrideAllocate = async (groupSize, restaurantId) => {
 
   return {
     status: "override_success",
+    combinedGroupId,
     tablesAssigned: selected.map(t => ({ id: t._id, capacity: t.capacity })),
     totalCapacity: totalCap
   };

@@ -14,7 +14,7 @@ const {
   markNoShow
 } = require("../controllers/reservationController");
 
-const { auth, isManager, isWaiter } = require("../middleware/auth");
+const { auth, isManagerOrOwnerOfRestaurant, isWaiter } = require("../middleware/auth");
 
 const allowHostOrWaiter = (req, res, next) => {
   if (!req.user) return res.status(401).json({ message: "Unauthorized" });
@@ -25,7 +25,7 @@ const allowHostOrWaiter = (req, res, next) => {
 const allowManagerOrHost = (req, res, next) => {
   if (!req.user) return res.status(401).json({ message: "Unauthorized" });
   if (req.user.role === "host") return next();
-  return isManager(req, res, next);
+  return isManagerOrOwnerOfRestaurant(req, res, next);
 };
 
 router.post("/", auth, createReservation);

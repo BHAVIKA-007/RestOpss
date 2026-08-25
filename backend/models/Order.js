@@ -25,6 +25,11 @@ const orderSchema = new mongoose.Schema({
     default: null
   },
 
+  combinedGroupId: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null
+  },
+
   items: [
     {
       menuItem: {
@@ -41,7 +46,7 @@ const orderSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ["pending", "preparing", "ready", "served", "completed"],
+    enum: ["pending", "accepted", "preparing", "ready", "picked_up", "served", "completed"],
     default: "pending"
   },
 
@@ -73,6 +78,11 @@ paymentMethod: {
 },
 
 paidAt: {
+  type: Date,
+  default: null
+},
+
+customerConfirmedAt: {
   type: Date,
   default: null
 },

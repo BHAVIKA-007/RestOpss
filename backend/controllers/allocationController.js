@@ -9,20 +9,22 @@ const {
 
 const WaitingQueue = require("../models/WaitingQueue");
 const Table = require("../models/Table");
+const Restaurant = require("../models/Restaurant");
 const { emitToRestaurant } = require("../services/socketService");
 
 const WAITLIST_RESPONSE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 
 exports.allocateTable = async (req, res) => {
   try {
-    const { groupSize } = req.body;
+    const { groupSize, guestName, guestPhone } = req.body;
     const restaurantId = req.user.restaurantId;
 
     if (!restaurantId) {
       return res.status(400).json({ error: "Customer role cannot allocate tables" });
     }
 
-    const result = await allocateTableService(groupSize, restaurantId, req.user._id);
+    const staffCreated = ["manager", "waiter", "host"].includes(req.user.role);
+    const result = await allocateTableService(groupSize, restaurantId, staffCreated ? null : req.user._id, guestName, guestPhone);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -92,7 +94,11 @@ exports.respondToWaitlistNotification = async (req, res) => {
     }
 
     // Verify restaurant scoping
-    if (!entry.restaurantId.equals(req.user.restaurantId)) {
+    const restaurant = await Restaurant.findById(entry.restaurantId).select("owner");
+    const restaurantId = entry.restaurantId;
+    const isOwner = restaurant?.owner.equals(req.user._id);
+    const isRestaurantStaff = entry.restaurantId.equals(req.user.restaurantId);
+    if (!isOwner && !isRestaurantStaff) {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
@@ -109,12 +115,12 @@ exports.respondToWaitlistNotification = async (req, res) => {
     // Verify that either the customer matches OR this is a host/manager responding for a walk-in
     if (entry.customer && !entry.customer.equals(req.user._id)) {
       // Customer is set, but it's not the current user
-      if (!["host", "manager"].includes(req.user.role)) {
+      if (!["host", "manager", "owner"].includes(req.user.role) || (!isOwner && req.user.role === "owner")) {
         return res.status(403).json({ error: "Unauthorized" });
       }
     } else if (!entry.customer) {
       // Walk-in entry (no customer), only host/manager can respond
-      if (!["host", "manager"].includes(req.user.role)) {
+      if (!["host", "manager", "owner"].includes(req.user.role) || (!isOwner && req.user.role === "owner")) {
         return res.status(403).json({ error: "Only host or manager can respond for walk-ins" });
       }
     }
@@ -125,7 +131,7 @@ exports.respondToWaitlistNotification = async (req, res) => {
         return res.status(400).json({ error: "tableId required to accept" });
       }
 
-      const table = await Table.findOne({ _id: tableId, restaurantId: req.user.restaurantId });
+      const table = await Table.findOne({ _id: tableId, restaurantId });
       if (!table) {
         return res.status(404).json({ error: "Table not found" });
       }
@@ -138,9 +144,9 @@ exports.respondToWaitlistNotification = async (req, res) => {
       table.status = "occupied";
       await table.save();
 
-      emitToRestaurant(req.user.restaurantId.toString(), "table:statusChanged", {
+      emitToRestaurant(restaurantId.toString(), "table:statusChanged", {
         tableId: table._id.toString(),
-        restaurantId: req.user.restaurantId.toString(),
+        restaurantId: restaurantId.toString(),
         status: table.status
       });
 
@@ -159,7 +165,7 @@ exports.respondToWaitlistNotification = async (req, res) => {
         return res.status(400).json({ error: "tableId required to decline" });
       }
 
-      const table = await Table.findOne({ _id: tableId, restaurantId: req.user.restaurantId });
+      const table = await Table.findOne({ _id: tableId, restaurantId });
       if (!table) {
         return res.status(404).json({ error: "Table not found" });
       }
@@ -168,9 +174,9 @@ exports.respondToWaitlistNotification = async (req, res) => {
       table.status = "available";
       await table.save();
 
-      emitToRestaurant(req.user.restaurantId.toString(), "table:statusChanged", {
+      emitToRestaurant(restaurantId.toString(), "table:statusChanged", {
         tableId: table._id.toString(),
-        restaurantId: req.user.restaurantId.toString(),
+        restaurantId: restaurantId.toString(),
         status: table.status
       });
 
@@ -179,7 +185,7 @@ exports.respondToWaitlistNotification = async (req, res) => {
 
       // Re-run allocation for this table against remaining queue
       try {
-        const reallocationResult = await allocateFromWaitlistForTable(tableId, req.user.restaurantId);
+        const reallocationResult = await allocateFromWaitlistForTable(tableId, restaurantId);
         return res.json({
           success: true,
           message: "Declined; table freed for next entry",

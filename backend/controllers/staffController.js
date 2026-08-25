@@ -6,12 +6,7 @@ exports.createStaff = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
-    // Only managers can create staff, not owners
-    if (req.user.role !== "manager") {
-      return res.status(403).json({ message: "Only managers can create staff" });
-    }
-
-    if (!req.user?.restaurantId) {
+    if (!req.restaurantId) {
       return res.status(400).json({ message: "You must be a manager of a restaurant to create staff" });
     }
 
@@ -35,7 +30,7 @@ exports.createStaff = async (req, res) => {
       email: normalizedEmail,
       password,
       role,
-      restaurantId: req.user.restaurantId
+      restaurantId: req.restaurantId
     });
 
     const createdUser = await User.findById(user._id).select("-password");
@@ -60,7 +55,7 @@ exports.createStaff = async (req, res) => {
 exports.getStaff = async (req, res) => {
   try {
     const staff = await User.find({
-      restaurantId: req.user.restaurantId,
+      restaurantId: req.restaurantId,
       role: { $in: staffRoles }
     }).select("-password");
 
@@ -82,7 +77,7 @@ exports.deleteStaff = async (req, res) => {
       return res.status(400).json({ message: "Cannot delete your own account" });
     }
 
-    if (targetUser.restaurantId?.toString() !== req.user.restaurantId?.toString()) {
+    if (targetUser.restaurantId?.toString() !== req.restaurantId?.toString()) {
       return res.status(403).json({ message: "You can only remove staff from your own restaurant" });
     }
 

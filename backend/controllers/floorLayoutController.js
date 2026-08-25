@@ -49,7 +49,7 @@ const validateTableEntry = (entry, restaurantId) => {
 
 exports.saveFloorLayout = async (req, res) => {
   try {
-    if (!req.user?.restaurantId) {
+    if (!req.restaurantId && !req.user?.restaurantId) {
       return res.status(400).json({ message: "You must own a restaurant first" });
     }
 
@@ -58,7 +58,7 @@ exports.saveFloorLayout = async (req, res) => {
     const tableEntries = Array.isArray(tables) ? tables : [];
     const elementEntries = Array.isArray(elements) ? elements : [];
 
-    const restaurantId = req.user.restaurantId;
+    const restaurantId = req.restaurantId || req.user.restaurantId;
 
     for (const [index, entry] of tableEntries.entries()) {
       const validationMessage = validateTableEntry(entry, restaurantId);

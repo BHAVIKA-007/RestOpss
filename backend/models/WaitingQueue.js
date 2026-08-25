@@ -18,6 +18,10 @@ const waitingSchema = new mongoose.Schema({
     default: null
   },
 
+  guestName: { type: String, default: null },
+  guestPhone: { type: String, default: null },
+  notificationChannel: { type: String, enum: ["in_app_only"], default: "in_app_only" },
+
   status: {
     type: String,
     enum: ["waiting", "notified", "allocated", "cancelled", "expired"],

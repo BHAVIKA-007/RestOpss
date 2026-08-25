@@ -28,22 +28,8 @@ exports.registerRestaurant = async (req, res) => {
 
 exports.getMyRestaurant = async (req, res) => {
   try {
-    let restaurant;
-    
-    // If owner, get owned restaurant; if manager, get managed restaurant
-    if (req.user.role === "owner") {
-      restaurant = await Restaurant.findOne({ owner: req.user._id }).populate("manager");
-    } else if (req.user.role === "manager") {
-      restaurant = await Restaurant.findOne({ _id: req.user.managedRestaurantId }).populate("manager");
-    } else {
-      return res.status(403).json({ message: "Only owner or manager can view restaurant" });
-    }
-    
-    if (!restaurant) {
-      return res.status(404).json({ message: "Restaurant not found" });
-    }
-
-    res.json(restaurant);
+    const restaurants = await Restaurant.find({ owner: req.user._id }).populate("manager");
+    res.json(restaurants);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -60,13 +46,9 @@ exports.getMyRestaurants = async (req, res) => {
 
 exports.assignManager = async (req, res) => {
   try {
-    const { restaurantId, managerId } = req.body;
-
-    if (!restaurantId || !managerId) {
-      return res.status(400).json({ message: "restaurantId and managerId are required" });
-    }
-
-    const restaurant = await Restaurant.findById(restaurantId);
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ message: "userId is required" });
+    const restaurant = await Restaurant.findById(req.params.id);
     if (!restaurant) {
       return res.status(404).json({ message: "Restaurant not found" });
     }
@@ -76,33 +58,23 @@ exports.assignManager = async (req, res) => {
       return res.status(403).json({ message: "Only restaurant owner can assign manager" });
     }
 
-    const managerUser = await User.findById(managerId);
+    if (restaurant.manager) return res.status(400).json({ message: "A manager is already assigned; use the replace route" });
+    const managerUser = await User.findById(userId);
     if (!managerUser) {
       return res.status(404).json({ message: "User not found" });
     }
 
     // Check if user is already a manager of another restaurant
-    if (managerUser.managedRestaurantId) {
+    if (managerUser.role === "manager" || managerUser.managedRestaurantId) {
       return res.status(400).json({ message: "This user is already a manager of another restaurant" });
     }
 
-    // If restaurant already has a manager, remove old manager
-    if (restaurant.manager) {
-      const oldManager = await User.findById(restaurant.manager);
-      if (oldManager) {
-        oldManager.managedRestaurantId = null;
-        oldManager.role = "customer";
-        await oldManager.save();
-      }
-    }
-
-    // Assign new manager
     managerUser.role = "manager";
-    managerUser.restaurantId = restaurantId;
-    managerUser.managedRestaurantId = restaurantId;
+    managerUser.restaurantId = restaurant._id;
+    managerUser.managedRestaurantId = restaurant._id;
     await managerUser.save();
 
-    restaurant.manager = managerId;
+    restaurant.manager = managerUser._id;
     await restaurant.save();
 
     res.json({ message: "Manager assigned successfully", restaurant });
@@ -111,15 +83,30 @@ exports.assignManager = async (req, res) => {
   }
 };
 
+exports.replaceManager = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ message: "userId is required" });
+    const restaurant = await Restaurant.findById(req.params.id);
+    if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
+    if (restaurant.owner.toString() !== req.user._id.toString()) return res.status(403).json({ message: "Only restaurant owner can replace manager" });
+    const manager = await User.findById(userId);
+    if (!manager) return res.status(404).json({ message: "User not found" });
+    if (manager.role === "manager" && manager.restaurantId?.toString() !== restaurant._id.toString()) return res.status(400).json({ message: "This user is already a manager of another restaurant" });
+    if (restaurant.manager && restaurant.manager.toString() !== manager._id.toString()) await User.findByIdAndUpdate(restaurant.manager, { role: "customer", restaurantId: null, managedRestaurantId: null });
+    manager.role = "manager";
+    manager.restaurantId = restaurant._id;
+    manager.managedRestaurantId = restaurant._id;
+    restaurant.manager = manager._id;
+    await manager.save();
+    await restaurant.save();
+    res.json({ message: "Manager replaced successfully", restaurant });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
 exports.removeManager = async (req, res) => {
   try {
-    const { restaurantId } = req.body;
-
-    if (!restaurantId) {
-      return res.status(400).json({ message: "restaurantId is required" });
-    }
-
-    const restaurant = await Restaurant.findById(restaurantId);
+    const restaurant = await Restaurant.findById(req.params.id);
     if (!restaurant) {
       return res.status(404).json({ message: "Restaurant not found" });
     }

@@ -1,11 +1,12 @@
 const Order = require("../models/Order");
+const { emitToRestaurant } = require("../services/socketService");
 
 // Get orders for kitchen
 exports.getKitchenOrders = async (req, res) => {
   try {
     const orders = await Order.find({
       restaurantId: req.user.restaurantId,
-      status: { $in: ["pending", "preparing"] }
+      status: { $in: ["pending", "accepted", "preparing"] }
     }).populate("table");
 
     res.json(orders);
@@ -20,7 +21,7 @@ exports.updateKitchenStatus = async (req, res) => {
   try {
     const { status } = req.body;
 
-    if (!["preparing", "ready"].includes(status)) {
+    if (!["accepted", "preparing", "ready"].includes(status)) {
       return res.status(400).json({ message: "Invalid kitchen status" });
     }
 
@@ -31,8 +32,19 @@ exports.updateKitchenStatus = async (req, res) => {
       return res.status(403).json({ message: "Cannot operate on an order from another restaurant" });
     }
 
+    const allowedNext = {
+      pending: "accepted",
+      accepted: "preparing",
+      preparing: "ready"
+    };
+    if (allowedNext[order.status] !== status) {
+      return res.status(400).json({ message: `Cannot transition order from ${order.status} to ${status}` });
+    }
     order.status = status;
     await order.save();
+
+    const events = { accepted: "order:accepted" };
+    if (events[status]) emitToRestaurant(order.restaurantId.toString(), events[status], { orderId: order._id.toString(), restaurantId: order.restaurantId.toString() });
 
     res.json({ message: "Order updated", order });
   } catch (err) {

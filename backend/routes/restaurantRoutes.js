@@ -1,13 +1,14 @@
 const express = require("express");
 const router = express.Router();
 
-const { registerRestaurant, getMyRestaurant, getMyRestaurants, assignManager, removeManager } = require("../controllers/restaurantController");
-const { auth, isOwner, isOwnerOrManager } = require("../middleware/auth");
+const { registerRestaurant, getMyRestaurant, getMyRestaurants, assignManager, replaceManager, removeManager } = require("../controllers/restaurantController");
+const { auth } = require("../middleware/auth");
 
 router.post("/", auth, registerRestaurant);
-router.get("/me", auth, isOwnerOrManager, getMyRestaurant);
-router.get("/owner/all", auth, isOwner, getMyRestaurants);
-router.post("/assign-manager", auth, isOwner, assignManager);
-router.post("/remove-manager", auth, isOwner, removeManager);
+router.get("/my", auth, getMyRestaurants);
+router.get("/me", auth, getMyRestaurants);
+router.post("/:id/assign-manager", auth, assignManager);
+router.patch("/:id/manager", auth, replaceManager);
+router.delete("/:id/manager", auth, removeManager);
 
 module.exports = router;

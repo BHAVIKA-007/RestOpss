@@ -13,7 +13,7 @@ exports.createMenuItem = async (req, res) => {
   try {
     const { name, description, price, category, isAvailable } = req.body;
 
-    if (!req.user?.restaurantId) {
+    if (!req.restaurantId) {
       return res.status(400).json({ message: "You must own a restaurant first" });
     }
 
@@ -35,7 +35,7 @@ exports.createMenuItem = async (req, res) => {
       price,
       category,
       isAvailable: isAvailable !== undefined ? isAvailable : true,
-      restaurantId: req.user.restaurantId
+      restaurantId: req.restaurantId
     });
 
     return res.status(201).json({ message: "Menu item created", menuItem });
@@ -50,7 +50,7 @@ exports.createMenuItem = async (req, res) => {
 
 exports.getManagerMenu = async (req, res) => {
   try {
-    const menuItems = await MenuItem.find({ restaurantId: req.user.restaurantId }).sort({ createdAt: 1 });
+    const menuItems = await MenuItem.find({ restaurantId: req.restaurantId }).sort({ createdAt: 1 });
     return res.json(menuItems);
   } catch (err) {
     return res.status(500).json({ message: err.message });
@@ -65,7 +65,7 @@ exports.updateMenuItem = async (req, res) => {
       return res.status(404).json({ message: "Menu item not found" });
     }
 
-    if (existingItem.restaurantId.toString() !== req.user.restaurantId?.toString()) {
+    if (existingItem.restaurantId.toString() !== req.restaurantId?.toString()) {
       return res.status(403).json({ message: "You can only update items from your own restaurant" });
     }
 
@@ -106,7 +106,7 @@ exports.deleteMenuItem = async (req, res) => {
       return res.status(404).json({ message: "Menu item not found" });
     }
 
-    if (menuItem.restaurantId.toString() !== req.user.restaurantId?.toString()) {
+    if (menuItem.restaurantId.toString() !== req.restaurantId?.toString()) {
       return res.status(403).json({ message: "You can only delete items from your own restaurant" });
     }
 

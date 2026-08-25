@@ -5,7 +5,9 @@ const {
   createOrder,
   getOrders,
   getOrder,
-  updateStatus
+  updateStatus,
+  pickupOrder,
+  deliverOrder
 } = require("../controllers/orderController");
 
 const {
@@ -18,6 +20,7 @@ const {
   getMyOrders,
   getMyOrder
 } = require("../controllers/customerOrderController");
+const { confirmReceived } = require("../controllers/customerOrderController");
 
 // Create order → Manager + Waiter
 router.post("/", auth, isManagerOrWaiter, createOrder);
@@ -25,6 +28,7 @@ router.post("/", auth, isManagerOrWaiter, createOrder);
 router.post("/mine", auth, createCustomerOrder);
 router.get("/mine", auth, getMyOrders);
 router.get("/mine/:id", auth, getMyOrder);
+router.patch("/mine/:id/confirm-received", auth, confirmReceived);
 
 // Get all orders → Manager + Waiter + Chef
 router.get("/", auth, isManagerWaiterChef, getOrders);
@@ -34,5 +38,7 @@ router.get("/:id", auth, isManagerWaiterChef, getOrder);
 
 // Update order status → Manager + Waiter + Chef
 router.patch("/:id", auth, isManagerWaiterChef, updateStatus);
+router.patch("/:id/pickup", auth, isManagerOrWaiter, pickupOrder);
+router.patch("/:id/deliver", auth, isManagerOrWaiter, deliverOrder);
 
 module.exports = router;

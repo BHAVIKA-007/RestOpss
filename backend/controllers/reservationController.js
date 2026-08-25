@@ -183,7 +183,7 @@ exports.approveReservation = async (req, res) => {
       return res.status(400).json({ message: "Only locked reservations can be approved" });
     }
 
-    if (!req.user.restaurantId || req.user.restaurantId.toString() !== reservation.restaurantId.toString()) {
+    if (!req.restaurantId || req.restaurantId.toString() !== reservation.restaurantId.toString()) {
       return res.status(403).json({ message: "Cannot operate on reservations for another restaurant" });
     }
 
@@ -213,7 +213,7 @@ exports.rejectReservation = async (req, res) => {
       return res.status(400).json({ message: "Only locked reservations can be rejected" });
     }
 
-    if (!req.user.restaurantId || req.user.restaurantId.toString() !== reservation.restaurantId.toString()) {
+    if (!req.restaurantId || req.restaurantId.toString() !== reservation.restaurantId.toString()) {
       return res.status(403).json({ message: "Cannot operate on reservations for another restaurant" });
     }
 

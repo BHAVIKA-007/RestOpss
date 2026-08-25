@@ -12,11 +12,11 @@ const {
 
 
 // Admin creates & deletes tables
-const { auth, isManager } = require("../middleware/auth");
+const { auth, isManagerOrOwnerOfRestaurant } = require("../middleware/auth");
 
-router.post("/", auth, isManager, createTable);
-router.patch("/:id", auth, isManager, updateTable);
-router.delete("/:id", auth, isManager, deleteTable);
+router.post("/", auth, isManagerOrOwnerOfRestaurant, createTable);
+router.patch("/:id", auth, isManagerOrOwnerOfRestaurant, updateTable);
+router.delete("/:id", auth, isManagerOrOwnerOfRestaurant, deleteTable);
 router.get("/", auth, getTables);
 router.get("/:id", auth, getTable);
 

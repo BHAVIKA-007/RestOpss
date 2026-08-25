@@ -23,6 +23,11 @@ const tableSchema = new mongoose.Schema({
     default: null
   },
 
+  combinedGroupId: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null
+  },
+
   restaurantId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Restaurant",

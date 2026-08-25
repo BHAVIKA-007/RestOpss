@@ -8,12 +8,12 @@ const {
   deleteMenuItem,
   getCustomerMenu
 } = require("../controllers/menuController");
-const { auth, isManager } = require("../middleware/auth");
+const { auth, isManagerOrOwnerOfRestaurant } = require("../middleware/auth");
 
-router.post("/", auth, isManager, createMenuItem);
-router.get("/", auth, isManager, getManagerMenu);
-router.patch("/:id", auth, isManager, updateMenuItem);
-router.delete("/:id", auth, isManager, deleteMenuItem);
+router.post("/", auth, isManagerOrOwnerOfRestaurant, createMenuItem);
+router.get("/", auth, isManagerOrOwnerOfRestaurant, getManagerMenu);
+router.patch("/:id", auth, isManagerOrOwnerOfRestaurant, updateMenuItem);
+router.delete("/:id", auth, isManagerOrOwnerOfRestaurant, deleteMenuItem);
 router.get("/:restaurantId", auth, getCustomerMenu);
 
 module.exports = router;

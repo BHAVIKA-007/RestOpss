@@ -1,5 +1,10 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Restaurant = require("../models/Restaurant");
+const Table = require("../models/Table");
+const MenuItem = require("../models/MenuItem");
+const UserModel = require("../models/User");
+const Reservation = require("../models/Reservation");
 
 exports.auth = async (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -47,6 +52,30 @@ exports.isManager = (req, res, next) => {
   }
 
   next();
+};
+
+exports.isManagerOrOwnerOfRestaurant = async (req, res, next) => {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+  try {
+    let restaurantId = req.params.restaurantId || req.body?.restaurantId || req.query.restaurantId;
+    if (!restaurantId && req.params.id) {
+      let Model = MenuItem;
+      if (req.baseUrl.includes("table")) Model = Table;
+      if (req.baseUrl.includes("staff")) Model = UserModel;
+      if (req.baseUrl.includes("reservation")) Model = Reservation;
+      const resource = await Model.findById(req.params.id).select("restaurantId");
+      if (resource) restaurantId = resource.restaurantId;
+    }
+    if (!restaurantId && req.user.role === "manager") restaurantId = req.user.restaurantId;
+    if (!restaurantId) return res.status(400).json({ message: "restaurantId is required for owners" });
+    const restaurant = await Restaurant.findById(restaurantId).select("owner");
+    if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
+    const isOwner = req.user.role === "owner" && restaurant.owner.equals(req.user._id);
+    const isManager = req.user.role === "manager" && req.user.restaurantId?.toString() === restaurantId.toString();
+    if (!isOwner && !isManager) return res.status(403).json({ message: "Only the restaurant owner or manager can perform this action" });
+    req.restaurantId = restaurant._id;
+    next();
+  } catch (err) { return res.status(500).json({ message: err.message }); }
 };
 
 exports.isManagerOrWaiter = (req, res, next) => {

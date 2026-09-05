@@ -1,0 +1,32 @@
+.page { min-height: 100svh; background: var(--color-light-gray); }
+.content, .center { width: min(100% - 2rem, 820px); margin: 0 auto; padding: 2rem 0 7rem; }
+.center { padding-top: 8rem; text-align: center; }
+.center a, .backLink { color: var(--color-accent); font-weight: 800; }
+.backLink { display: inline-block; margin-bottom: 2.5rem; text-decoration: none; }
+.eyebrow { margin: 0 0 0.75rem; color: var(--color-accent); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.content > h1, .center h1 { margin: 0 0 0.8rem; font-family: var(--font-display); font-size: clamp(2.8rem, 8vw, 5rem); font-weight: 500; letter-spacing: -0.05em; line-height: 0.98; }
+.intro { color: var(--color-muted); }
+.error { margin: 1rem 0; padding: 0.9rem; border-radius: 12px; color: #a6292c; background: #fff0f0; }
+.category { margin-top: 1.5rem; padding: 1.3rem clamp(1rem, 4vw, 2rem); border-radius: 18px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.category h2 { margin: 0 0 0.7rem; color: var(--color-accent); font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 0; border-top: 1px solid var(--color-light-gray); }
+.item > span { display: grid; gap: 0.3rem; }
+.item small { color: var(--color-muted); line-height: 1.4; }
+.item > div { display: flex; align-items: center; gap: 0.65rem; }
+.item b { white-space: nowrap; }
+.item button, .item em { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 50%; font-style: normal; }
+.item button { color: var(--color-white); background: var(--color-dark); cursor: pointer; }
+.stickyBar { position: fixed; right: 0; bottom: 0; left: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem max(1rem, calc((100% - 820px) / 2)); color: var(--color-white); background: var(--color-dark); }
+.stickyBar button, .receivedButton { padding: 0.8rem 1rem; border: 0; border-radius: 999px; color: var(--color-white); background: var(--color-accent); cursor: pointer; font-weight: 800; }
+.stickyBar button:disabled { cursor: not-allowed; opacity: 0.45; }
+.trackingCard { margin-top: 2rem; padding: clamp(1.3rem, 4vw, 2.2rem); border-radius: 18px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.trackingHeader { display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-weight: 800; }
+.steps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.35rem; margin: 2.5rem 0 1rem; }
+.step { display: grid; justify-items: center; gap: 0.5rem; color: #b5b5b5; font-size: 0.65rem; text-align: center; text-transform: capitalize; }
+.step span { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 50%; background: #e5e5e5; }
+.stepActive { color: var(--color-accent); font-weight: 800; }
+.stepActive span { color: var(--color-white); background: var(--color-accent); }
+.trackingNote { color: var(--color-muted); line-height: 1.5; }
+.receivedButton { margin-top: 0.8rem; }
+.ordersLink { margin-top: 1.5rem; padding: 0; border: 0; color: var(--color-accent); background: transparent; cursor: pointer; font-weight: 800; }
+@media (max-width: 600px) { .item { align-items: flex-start; flex-direction: column; } .steps { gap: 0.15rem; } .step small { font-size: 0.55rem; } }

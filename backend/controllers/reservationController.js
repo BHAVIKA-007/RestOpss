@@ -194,6 +194,13 @@ exports.approveReservation = async (req, res) => {
     reservation.lockExpiresAt = new Date(Date.now() + LOCK_DURATION_MS);
     await reservation.save();
 
+    emitToRestaurant(reservation.restaurantId.toString(), "reservation:approved", {
+      reservationId: reservation._id.toString(),
+      restaurantId: reservation.restaurantId.toString(),
+      tableIds: reservation.tables.map((table) => table.toString()),
+      lockExpiresAt: reservation.lockExpiresAt
+    });
+
     res.json({ message: "Reservation approved", reservation });
   } catch (err) {
     res.status(500).json({ message: err.message });

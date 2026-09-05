@@ -45,6 +45,16 @@ exports.updateKitchenStatus = async (req, res) => {
 
     const events = { accepted: "order:accepted" };
     if (events[status]) emitToRestaurant(order.restaurantId.toString(), events[status], { orderId: order._id.toString(), restaurantId: order.restaurantId.toString() });
+    if (status === "preparing") emitToRestaurant(order.restaurantId.toString(), "order:preparing", {
+      orderId: order._id.toString(),
+      restaurantId: order.restaurantId.toString(),
+      tableId: order.table.toString()
+    });
+    if (status === "ready") emitToRestaurant(order.restaurantId.toString(), "order:ready", {
+      orderId: order._id.toString(),
+      restaurantId: order.restaurantId.toString(),
+      tableId: order.table.toString()
+    });
 
     res.json({ message: "Order updated", order });
   } catch (err) {

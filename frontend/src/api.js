@@ -30,7 +30,9 @@ export async function apiRequest(path, options = {}) {
 
   if (!response.ok) {
     const message = typeof data === 'string' ? data : data.message
-    throw new Error(message || 'Something went wrong. Please try again.')
+    const error = new Error(message || 'Something went wrong. Please try again.')
+    error.status = response.status
+    throw error
   }
 
   return data

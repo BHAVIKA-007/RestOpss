@@ -1,0 +1,25 @@
+.page { min-height: 100svh; background: var(--color-light-gray); }
+.content, .center { width: min(100% - 2rem, 720px); margin: 0 auto; padding: 3rem 0 5rem; }
+.center { text-align: center; }
+.eyebrow { margin: 0 0 0.75rem; color: var(--color-accent); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.content h1, .center h1 { margin: 0 0 0.8rem; font-family: var(--font-display); font-size: clamp(2.8rem, 8vw, 5rem); font-weight: 500; letter-spacing: -0.05em; line-height: 0.98; }
+.intro { color: var(--color-muted); }
+.card, .waiting, .confirmBox, .notice { margin-top: 2rem; padding: clamp(1.3rem, 4vw, 2.2rem); border-radius: 18px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.cardTop { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; font-weight: 800; }
+dl { display: grid; gap: 0.8rem; margin: 0; }
+dl div { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--color-light-gray); padding-top: 0.8rem; }
+dt { color: var(--color-muted); }
+dd { max-width: 70%; margin: 0; font-weight: 800; text-align: right; overflow-wrap: anywhere; }
+.waiting { text-align: center; }
+.waiting h2, .notice h2 { font-family: var(--font-display); font-size: 1.8rem; font-weight: 500; }
+.waiting p, .notice p, .confirmBox p { color: var(--color-muted); line-height: 1.55; }
+.waiting strong { display: block; margin-top: 1.2rem; font-size: 1.5rem; }
+.loader { display: block; width: 28px; height: 28px; margin: 0 auto 1rem; border: 3px solid #e5c5c5; border-top-color: var(--color-accent); border-radius: 50%; animation: spin 900ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.confirmBox { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.confirmBox p { margin: 0; }
+.confirmButton { padding: 0.9rem 1.1rem; border: 0; border-radius: 999px; color: var(--color-white); background: var(--color-accent); cursor: pointer; font-weight: 800; white-space: nowrap; }
+.notice a, .center a { color: var(--color-accent); font-weight: 800; }
+.error { padding: 1rem; border-radius: 12px; color: #a6292c; background: #fff0f0; }
+.preOrderNote { color: var(--color-muted); font-size: 0.8rem; }
+@media (max-width: 560px) { .confirmBox { align-items: stretch; flex-direction: column; } .confirmButton { width: 100%; } }

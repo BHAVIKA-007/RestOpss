@@ -1,0 +1,7 @@
+.badge { display: inline-flex; padding: 0.35rem 0.6rem; border-radius: 999px; font-size: 0.7rem; font-weight: 800; text-transform: capitalize; }
+.default { color: var(--color-dark); background: var(--color-light-gray); }
+.locked, .pending { color: #8a5a00; background: #fff1c9; }
+.confirmed, .seated, .served, .ready { color: #287044; background: #e1f3e7; }
+.accepted, .preparing { color: #2d5c85; background: #e2effb; }
+.completed, .picked_up { color: #4d5260; background: #e7e8eb; }
+.cancelled, .no_show { color: #8c393b; background: #f8dfdf; }

@@ -1,9 +1,11 @@
 const Restaurant = require("../models/Restaurant");
 const User = require("../models/User");
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 exports.registerRestaurant = async (req, res) => {
   try {
-    const { name, address, phone } = req.body;
+    const { name, address, phone, cuisine } = req.body;
 
     if (!name) {
       return res.status(400).json({ message: "Restaurant name is required" });
@@ -13,6 +15,7 @@ exports.registerRestaurant = async (req, res) => {
       name,
       address,
       phone,
+      cuisine: Array.isArray(cuisine) ? cuisine : [],
       owner: req.user._id
     });
 
@@ -22,6 +25,44 @@ exports.registerRestaurant = async (req, res) => {
 
     res.status(201).json({ message: "Restaurant created", restaurant });
   } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getPublicRestaurants = async (req, res) => {
+  try {
+    const { cuisine, search } = req.query;
+    const filter = {};
+
+    if (cuisine) {
+      filter.cuisine = { $regex: `^${escapeRegex(cuisine)}$`, $options: "i" };
+    }
+
+    if (search) {
+      filter.name = { $regex: escapeRegex(search), $options: "i" };
+    }
+
+    const restaurants = await Restaurant.find(filter).select("_id name address phone cuisine");
+    res.json(restaurants);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getPublicRestaurant = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findById(req.params.id).select("_id name address phone cuisine");
+
+    if (!restaurant) {
+      return res.status(404).json({ message: "Restaurant not found" });
+    }
+
+    res.json(restaurant);
+  } catch (err) {
+    if (err.name === "CastError") {
+      return res.status(404).json({ message: "Restaurant not found" });
+    }
+
     res.status(500).json({ message: err.message });
   }
 };

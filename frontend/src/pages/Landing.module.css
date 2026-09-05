@@ -1,0 +1,370 @@
+.page {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-white);
+}
+
+.header,
+.hero,
+.ownerSection,
+.footer {
+  width: min(100% - 2.5rem, 1160px);
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 0;
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: -0.08em;
+  text-decoration: none;
+}
+
+.logo span {
+  color: var(--color-accent);
+}
+
+.nav,
+.footerLinks {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.loginLink,
+.footer a {
+  text-decoration: none;
+  color: var(--color-dark);
+}
+
+.loginLink {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.primaryButton,
+.ownerButton {
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 700;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.primaryButton {
+  padding: 0.72rem 1.05rem;
+  color: var(--color-white);
+  background: var(--color-accent);
+  font-size: 0.82rem;
+}
+
+.primaryButton:hover,
+.ownerButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(230, 66, 69, 0.24);
+}
+
+.hero {
+  position: relative;
+  min-height: 570px;
+  display: flex;
+  align-items: center;
+  padding: 4rem 0 6.5rem;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 650px);
+}
+
+.eyebrow,
+.ownerEyebrow {
+  margin: 0 0 1rem;
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+}
+
+h1 {
+  max-width: 620px;
+  margin-bottom: 1.3rem;
+  font-size: clamp(3rem, 7vw, 5.7rem);
+  line-height: 0.98;
+}
+
+.subheading {
+  max-width: 480px;
+  margin-bottom: 2.2rem;
+  color: var(--color-muted);
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.searchShell {
+  display: flex;
+  align-items: center;
+  width: min(100%, 570px);
+  min-height: 68px;
+  padding: 0.55rem 0.7rem 0.55rem 1.25rem;
+  border-radius: 18px;
+  background: var(--color-light-gray);
+  box-shadow: var(--shadow-card);
+}
+
+.searchShell input {
+  width: 100%;
+  min-width: 0;
+  padding: 0 0.85rem;
+  border: 0;
+  outline: 0;
+  color: var(--color-dark);
+  background: transparent;
+}
+
+.searchShell input::placeholder {
+  color: #929292;
+}
+
+.searchIcon,
+.filterIcon {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.searchIcon {
+  color: var(--color-accent);
+}
+
+.filterButton {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  place-items: center;
+  border: 0;
+  border-radius: 14px;
+  color: var(--color-white);
+  background: var(--color-dark);
+  cursor: pointer;
+}
+
+.filterIcon {
+  width: 20px;
+  height: 20px;
+}
+
+.quickLinks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 1.1rem;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+.quickLinks button {
+  padding: 0.38rem 0.7rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 999px;
+  color: var(--color-dark);
+  background: var(--color-white);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.heroAccent {
+  position: absolute;
+  top: 8%;
+  right: -7%;
+  width: 45%;
+  height: 86%;
+  border-radius: 48% 48% 46% 46%;
+  background: var(--color-light-gray);
+  transform: rotate(8deg);
+}
+
+.accentCircle {
+  position: absolute;
+  top: 14%;
+  right: 18%;
+  width: 88px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.accentLine {
+  position: absolute;
+  top: 47%;
+  left: 22%;
+  width: 58%;
+  height: 1px;
+  background: var(--color-dark);
+  transform: rotate(-28deg);
+}
+
+.accentLabel {
+  position: absolute;
+  right: 12%;
+  bottom: 16%;
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 2.2vw, 2rem);
+  line-height: 1.05;
+  text-align: right;
+  transform: rotate(8deg);
+}
+
+.ownerSection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 5rem;
+  padding: 3.3rem clamp(1.5rem, 5vw, 4.5rem);
+  border-radius: 24px;
+  color: var(--color-white);
+  background: var(--color-dark);
+}
+
+.ownerSection h2 {
+  max-width: 480px;
+  margin-bottom: 0.6rem;
+  font-size: clamp(2rem, 4vw, 3.3rem);
+  line-height: 1;
+}
+
+.ownerSection p:last-child {
+  max-width: 420px;
+  margin-bottom: 0;
+  color: #c6c6c6;
+}
+
+.ownerEyebrow {
+  margin-bottom: 0.9rem;
+}
+
+.ownerButton {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  color: var(--color-dark);
+  background: var(--color-white);
+  font-size: 0.9rem;
+}
+
+.ownerButton span {
+  color: var(--color-accent);
+  font-size: 1.25rem;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding: 1.35rem 0 1.7rem;
+  color: #8a8a8a;
+  font-size: 0.75rem;
+}
+
+.footer a {
+  color: #8a8a8a;
+}
+
+@media (max-width: 720px) {
+  .header,
+  .hero,
+  .ownerSection,
+  .footer {
+    width: min(100% - 2rem, 560px);
+  }
+
+  .header {
+    padding: 1.25rem 0;
+  }
+
+  .hero {
+    min-height: 635px;
+    padding: 4.2rem 0 7rem;
+    align-items: flex-start;
+  }
+
+  .heroAccent {
+    top: auto;
+    right: -20%;
+    bottom: -4%;
+    width: 80%;
+    height: 40%;
+    opacity: 0.7;
+  }
+
+  .accentCircle {
+    width: 58px;
+  }
+
+  .ownerSection {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-bottom: 3rem;
+    padding: 2.25rem 1.5rem;
+  }
+
+  .footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .loginLink {
+    display: none;
+  }
+
+  h1 {
+    font-size: 2.9rem;
+  }
+
+  .searchShell {
+    min-height: 62px;
+  }
+
+  .filterButton {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+  }
+}

@@ -1,0 +1,48 @@
+:root {
+  --color-dark: #222222;
+  --color-white: #FFFFFF;
+  --color-accent: #E64245;
+  --color-light-gray: #F3F3F3;
+  --color-muted: #777777;
+  --shadow-card: 0 18px 45px rgba(34, 34, 34, 0.08);
+  --font-body: 'DM Sans', 'Trebuchet MS', sans-serif;
+  --font-display: Georgia, 'Times New Roman', serif;
+  font-family: var(--font-body);
+  color: var(--color-dark);
+  background: var(--color-white);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+}
+
+.routeLoading {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  color: var(--color-muted);
+  background: var(--color-light-gray);
+}

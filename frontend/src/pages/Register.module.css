@@ -1,0 +1,117 @@
+.page {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+  background: var(--color-light-gray);
+}
+
+.card {
+  width: min(100%, 450px);
+  padding: clamp(2rem, 7vw, 4rem);
+  border-radius: 24px;
+  background: var(--color-white);
+  box-shadow: var(--shadow-card);
+}
+
+.logo {
+  display: inline-block;
+  margin-bottom: 3.5rem;
+  color: var(--color-dark);
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: -0.08em;
+  text-decoration: none;
+}
+
+.logo span {
+  color: var(--color-accent);
+}
+
+.eyebrow {
+  margin-bottom: 0.7rem;
+  color: var(--color-accent);
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.card h1 {
+  margin: 0 0 0.8rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 8vw, 3.7rem);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.intro {
+  margin-bottom: 2rem;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+.form {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.form label {
+  margin-top: 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.form input {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  outline: 0;
+  color: var(--color-dark);
+  background: var(--color-light-gray);
+}
+
+.form input:focus {
+  border-color: var(--color-accent);
+}
+
+.error {
+  margin: 0.6rem 0 0;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  color: #a6292c;
+  background: #fff0f0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.submitButton {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 0;
+  border-radius: 12px;
+  color: var(--color-white);
+  background: var(--color-accent);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.submitButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.switchPrompt {
+  margin: 1.6rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.switchPrompt a {
+  color: var(--color-accent);
+  font-weight: 800;
+}

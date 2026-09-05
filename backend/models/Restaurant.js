@@ -6,6 +6,7 @@ const RestaurantSchema = new mongoose.Schema({
   manager: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   address: { type: String },
   phone: { type: String },
+  cuisine: { type: [String], default: [] },
   createdAt: { type: Date, default: Date.now }
 });
 

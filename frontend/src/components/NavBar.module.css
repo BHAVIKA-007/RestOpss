@@ -1,0 +1,60 @@
+.navbar {
+  width: min(100% - 2rem, 1160px);
+  margin: 0 auto;
+  padding: 1.35rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.logo {
+  color: var(--color-dark);
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: -0.08em;
+  text-decoration: none;
+}
+
+.logo span {
+  color: var(--color-accent);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-size: 0.82rem;
+}
+
+.greeting {
+  max-width: 150px;
+  overflow: hidden;
+  color: var(--color-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountLink {
+  color: var(--color-dark);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.logoutButton {
+  padding: 0.6rem 0.9rem;
+  border: 0;
+  border-radius: 999px;
+  color: var(--color-white);
+  background: var(--color-dark);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+@media (max-width: 560px) {
+  .greeting {
+    display: none;
+  }
+}

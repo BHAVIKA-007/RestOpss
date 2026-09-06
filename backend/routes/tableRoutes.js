@@ -5,6 +5,9 @@ const {
   createTable,
   getTables,
   getTable,
+  getMyTables,
+  assignWaiter,
+  updateHostTableStatus,
   updateTable,
   deleteTable
 } = require("../controllers/tableController");
@@ -12,9 +15,12 @@ const {
 
 
 // Admin creates & deletes tables
-const { auth, isManagerOrOwnerOfRestaurant } = require("../middleware/auth");
+const { auth, isWaiterOnly, isManagerOrOwnerOfRestaurant, isManagerOwnerOrHostOfTable } = require("../middleware/auth");
 
 router.post("/", auth, isManagerOrOwnerOfRestaurant, createTable);
+router.get("/mine", auth, isWaiterOnly, getMyTables);
+router.patch("/:id/assign-waiter", auth, isManagerOrOwnerOfRestaurant, assignWaiter);
+router.patch("/:id/status", auth, isManagerOwnerOrHostOfTable, updateHostTableStatus);
 router.patch("/:id", auth, isManagerOrOwnerOfRestaurant, updateTable);
 router.delete("/:id", auth, isManagerOrOwnerOfRestaurant, deleteTable);
 router.get("/", auth, getTables);

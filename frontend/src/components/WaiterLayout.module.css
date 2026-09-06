@@ -1,0 +1,10 @@
+.page { min-height: 100svh; background: var(--color-light-gray); }
+.workspace { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 2.5rem; width: min(100% - 2rem, 1160px); margin: 0 auto; }
+.sidebar { padding: 1.2rem 0 3rem; }
+.kicker { color: var(--color-accent); font-size: 0.65rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.sidebar strong { display: block; margin: 0.35rem 0 1.4rem; font-family: var(--font-display); font-size: 1.5rem; font-weight: 500; }
+.sidebar nav { display: grid; gap: 0.25rem; }
+.link { padding: 0.7rem 0.8rem; border-radius: 8px; color: var(--color-muted); font-size: 0.8rem; font-weight: 800; text-decoration: none; }
+.link:hover, .active { color: var(--color-accent); background: var(--color-white); }
+.main { min-width: 0; padding: 2.5rem 0 5rem; }
+@media (max-width: 680px) { .workspace { display: block; width: min(100% - 2rem, 700px); } .sidebar { overflow-x: auto; padding-bottom: 0; } .sidebar nav { display: flex; min-width: max-content; } .link { padding-inline: 0.6rem; } .main { padding-top: 2rem; } }

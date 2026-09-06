@@ -34,6 +34,12 @@ const tableSchema = new mongoose.Schema({
     required: true
   },
 
+  assignedWaiter: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null
+  },
+
   gridX: {
     type: Number,
     required: true

@@ -5,6 +5,7 @@ const Table = require("../models/Table");
 const MenuItem = require("../models/MenuItem");
 const UserModel = require("../models/User");
 const Reservation = require("../models/Reservation");
+const mongoose = require("mongoose");
 
 exports.auth = async (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -78,6 +79,39 @@ exports.isManagerOrOwnerOfRestaurant = async (req, res, next) => {
   } catch (err) { return res.status(500).json({ message: err.message }); }
 };
 
+exports.isManagerOwnerOrHostOfTable = async (req, res, next) => {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+  try {
+    const table = await Table.findById(req.params.id).select("restaurantId");
+    if (!table) return res.status(404).json({ message: "Table not found" });
+
+    const userRestaurantId = req.user.restaurantId?.toString();
+    const tableRestaurantId = table.restaurantId.toString();
+    const isManagerOrHost = ["manager", "host"].includes(req.user.role);
+    const isOwner = req.user.role === "owner";
+
+    if (isManagerOrHost && userRestaurantId !== tableRestaurantId) {
+      return res.status(403).json({ message: "You cannot operate on a table from another restaurant" });
+    }
+
+    if (isOwner) {
+      const restaurant = await Restaurant.findById(table.restaurantId).select("owner");
+      if (!restaurant || !restaurant.owner.equals(req.user._id)) {
+        return res.status(403).json({ message: "Only the restaurant owner can operate on this table" });
+      }
+    } else if (!isManagerOrHost) {
+      return res.status(403).json({ message: "Only a manager, owner, or host can operate on this table" });
+    }
+
+    req.restaurantId = table.restaurantId;
+    next();
+  } catch (err) {
+    if (err?.name === "CastError") return res.status(404).json({ message: "Table not found" });
+    return res.status(500).json({ message: err.message });
+  }
+};
+
 exports.isManagerHostOrOwnerOfRestaurant = async (req, res, next) => {
   if (!req.user) return res.status(401).json({ message: "Unauthorized" });
 
@@ -148,6 +182,12 @@ exports.isWaiter = (req, res, next) => {
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
+};
+
+exports.isWaiterOnly = (req, res, next) => {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+  if (req.user.role !== "waiter") return res.status(403).json({ message: "Only waiter can view assigned tables" });
+  next();
 };
 
 exports.isHost = (req, res, next) => {

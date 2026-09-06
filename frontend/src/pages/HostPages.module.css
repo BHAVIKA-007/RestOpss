@@ -1,0 +1,44 @@
+.heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin: 1rem 0 2rem; }
+.eyebrow, .label { display: block; margin: 0 0 0.7rem; color: var(--color-accent); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.heading h1 { margin: 0 0 0.65rem; font-family: var(--font-display); font-size: clamp(2.5rem, 6vw, 4.7rem); font-weight: 500; letter-spacing: -0.05em; line-height: 0.95; }
+.heading p:last-child { margin: 0; color: var(--color-muted); }
+.panel { padding: 1.1rem; border-radius: 16px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.status { color: var(--color-muted); }
+.error { padding: 0.85rem 1rem; border-radius: 10px; color: #a6292c; background: #fff0f0; font-size: 0.8rem; }
+.success { padding: 0.85rem 1rem; border-radius: 10px; color: #287044; background: #e1f3e7; font-size: 0.8rem; }
+.floorPanel { position: relative; }
+.actionMenu { display: grid; gap: 0.55rem; margin-top: 1rem; padding: 1rem; border: 1px solid #ead0d0; border-radius: 12px; background: #fffafa; }
+.actionMenu h2 { margin: 0; font-family: var(--font-display); font-size: 1.5rem; font-weight: 500; }
+.actionMenu p { margin: 0; color: var(--color-muted); font-size: 0.75rem; }
+.actionButton, .primaryButton, .secondaryButton { padding: 0.7rem 0.85rem; border: 0; border-radius: 999px; cursor: pointer; font-size: 0.74rem; font-weight: 800; }
+.primaryButton { color: var(--color-white); background: var(--color-accent); text-decoration: none; }
+.secondaryButton { color: var(--color-dark); background: var(--color-light-gray); text-decoration: none; }
+.actionButton { color: var(--color-dark); background: var(--color-light-gray); text-align: left; }
+.actionButton:disabled, .primaryButton:disabled { cursor: wait; opacity: 0.55; }
+.actionRow { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.reservationPicker { display: grid; gap: 0.4rem; margin-top: 0.35rem; }
+.reservationPicker button { padding: 0.55rem; border: 1px solid #ead0d0; border-radius: 8px; color: var(--color-dark); background: var(--color-white); cursor: pointer; font-size: 0.72rem; text-align: left; }
+.formPanel { max-width: 620px; padding: clamp(1.2rem, 4vw, 2rem); border-radius: 16px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.formGrid { display: grid; gap: 0.8rem; }
+.formGrid label { display: grid; gap: 0.35rem; color: var(--color-muted); font-size: 0.74rem; font-weight: 800; }
+.formGrid input { padding: 0.8rem; border: 1px solid #d8d8d8; border-radius: 8px; font: inherit; }
+.stepper { display: flex; align-items: center; gap: 0.7rem; }
+.stepper button { width: 2rem; height: 2rem; border: 0; border-radius: 50%; color: var(--color-white); background: var(--color-dark); cursor: pointer; }
+.stepper output { min-width: 2rem; text-align: center; font-weight: 800; }
+.caption { color: var(--color-muted); font-size: 0.72rem; line-height: 1.45; }
+.result { margin-top: 1rem; padding: 1rem; border-radius: 12px; background: #f4faf5; }
+.result h2 { margin: 0 0 0.5rem; font-family: var(--font-display); font-size: 1.7rem; font-weight: 500; }
+.result p { margin: 0 0 0.9rem; color: var(--color-muted); font-size: 0.8rem; }
+.list { display: grid; gap: 0.75rem; }
+.queueCard { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1rem; padding: 1rem; border-radius: 14px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.position { display: grid; width: 2.3rem; height: 2.3rem; place-items: center; border-radius: 50%; color: var(--color-accent); background: #fff0f0; font-family: var(--font-display); font-size: 1.2rem; }
+.queueCard h2 { margin: 0 0 0.25rem; font-family: var(--font-display); font-size: 1.25rem; font-weight: 500; }
+.queueCard p { margin: 0; color: var(--color-muted); font-size: 0.74rem; }
+.queueActions { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: end; }
+.tableWrap { overflow-x: auto; }
+.dataTable { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.dataTable th { padding: 0.65rem; color: var(--color-muted); font-size: 0.63rem; letter-spacing: 0.08em; text-align: left; text-transform: uppercase; }
+.dataTable td { padding: 0.85rem 0.65rem; border-top: 1px solid var(--color-light-gray); }
+.dataTable td small { display: block; margin-top: 0.25rem; color: var(--color-muted); }
+.empty { padding: 2rem; border-radius: 16px; background: var(--color-white); color: var(--color-muted); text-align: center; }
+@media (max-width: 680px) { .heading { align-items: start; flex-direction: column; } .queueCard { grid-template-columns: auto 1fr; } .queueActions { grid-column: 2; justify-content: start; } }

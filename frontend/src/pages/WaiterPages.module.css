@@ -1,0 +1,40 @@
+.heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin: 1rem 0 2rem; }
+.eyebrow, .label { display: block; margin: 0 0 0.7rem; color: var(--color-accent); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.heading h1 { margin: 0 0 0.65rem; font-family: var(--font-display); font-size: clamp(2.5rem, 6vw, 4.7rem); font-weight: 500; letter-spacing: -0.05em; line-height: 0.95; }
+.heading p:last-child { margin: 0; color: var(--color-muted); }
+.status, .caption { color: var(--color-muted); }
+.error { padding: 0.85rem 1rem; border-radius: 10px; color: #a6292c; background: #fff0f0; font-size: 0.8rem; }
+.success { padding: 0.85rem 1rem; border-radius: 10px; color: #287044; background: #e1f3e7; font-size: 0.8rem; }
+.cardGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.card { display: grid; gap: 0.7rem; padding: 1.2rem; border-radius: 16px; color: var(--color-dark); background: var(--color-white); box-shadow: var(--shadow-card); text-decoration: none; }
+.card:hover h2 { color: var(--color-accent); }
+.card h2 { margin: 0; font-family: var(--font-display); font-size: 1.7rem; font-weight: 500; }
+.card p { margin: 0; color: var(--color-muted); font-size: 0.78rem; }
+.cardFooter { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.5rem; }
+.link { color: var(--color-accent); font-size: 0.75rem; font-weight: 800; }
+.orderHint { padding-top: 0.7rem; border-top: 1px solid var(--color-light-gray); color: var(--color-muted); font-size: 0.7rem; }
+.panel { padding: 1.1rem; border-radius: 16px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.formPanel { max-width: 760px; padding: clamp(1.1rem, 4vw, 2rem); border-radius: 16px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.formGrid { display: grid; gap: 0.8rem; }
+.formGrid label { display: grid; gap: 0.35rem; color: var(--color-muted); font-size: 0.74rem; font-weight: 800; }
+.formGrid input { padding: 0.8rem; border: 1px solid #d8d8d8; border-radius: 8px; font: inherit; }
+.category { margin-top: 1rem; padding: 1rem; border-radius: 14px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.category h2 { margin: 0 0 0.5rem; color: var(--color-accent); font-size: 0.76rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.menuItem { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.85rem 0; border-top: 1px solid var(--color-light-gray); }
+.menuItem strong { display: block; }
+.menuItem small { display: block; margin-top: 0.25rem; color: var(--color-muted); }
+.quantity { display: flex; align-items: center; gap: 0.55rem; }
+.quantity button { width: 1.9rem; height: 1.9rem; border: 0; border-radius: 50%; color: var(--color-white); background: var(--color-dark); cursor: pointer; }
+.quantity em { min-width: 1rem; font-style: normal; text-align: center; }
+.primaryButton, .secondaryButton { display: inline-flex; padding: 0.75rem 0.95rem; border: 0; border-radius: 999px; cursor: pointer; font-size: 0.74rem; font-weight: 800; text-decoration: none; }
+.primaryButton { color: var(--color-white); background: var(--color-accent); }
+.secondaryButton { color: var(--color-dark); background: var(--color-light-gray); }
+.primaryButton:disabled { opacity: 0.55; cursor: wait; }
+.totalBar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; padding: 1rem; border-radius: 14px; color: var(--color-white); background: var(--color-dark); }
+.orderList { display: grid; gap: 0.75rem; }
+.orderCard { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border-radius: 14px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.orderCard h2 { margin: 0 0 0.3rem; font-family: var(--font-display); font-size: 1.25rem; font-weight: 500; }
+.orderCard p { margin: 0; color: var(--color-muted); font-size: 0.75rem; }
+.empty { padding: 2rem; border-radius: 16px; background: var(--color-white); color: var(--color-muted); text-align: center; }
+@media (max-width: 800px) { .cardGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .heading { align-items: start; flex-direction: column; } .cardGrid { grid-template-columns: 1fr; } .orderCard { align-items: start; flex-direction: column; } }

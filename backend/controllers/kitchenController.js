@@ -6,7 +6,7 @@ exports.getKitchenOrders = async (req, res) => {
   try {
     const orders = await Order.find({
       restaurantId: req.user.restaurantId,
-      status: { $in: ["pending", "accepted", "preparing"] }
+      status: { $in: ["pending", "accepted", "preparing", "ready"] }
     }).populate("table");
 
     res.json(orders);

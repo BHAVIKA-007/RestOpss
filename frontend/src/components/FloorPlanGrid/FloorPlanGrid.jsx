@@ -73,7 +73,7 @@ function FloorPlanGrid({
               key={tableId}
               style={{ gridColumn: table.gridX - minX + 1, gridRow: table.gridY - minY + 1 }}
               disabled={mode === 'view-only' || (mode === 'select-single' && !isAvailable)}
-              onClick={mode === 'view-only' ? undefined : () => (mode === 'builder' || isAvailable) && onTableClick(tableId)}
+              onClick={mode === 'view-only' ? undefined : () => (mode === 'builder' || mode === 'host-action' || isAvailable) && onTableClick(tableId)}
               title={`${table.number ? `Table ${table.number}` : 'Table'}: ${table.status}`}
             >
               <strong>{table.number ?? '?'}</strong>

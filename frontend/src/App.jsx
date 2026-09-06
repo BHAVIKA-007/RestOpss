@@ -15,6 +15,12 @@ import ManagerReports from './pages/ManagerReports'
 import ManagerReservations from './pages/ManagerReservations'
 import ManagerStaff from './pages/ManagerStaff'
 import ManagerWaitlist from './pages/ManagerWaitlist'
+import HostFloor from './pages/HostFloor'
+import HostWalkin from './pages/HostWalkin'
+import HostWaitlist from './pages/HostWaitlist'
+import WaiterTables from './pages/WaiterTables'
+import WaiterOrder from './pages/WaiterOrder'
+import WaiterPickup from './pages/WaiterPickup'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import MenuView from './pages/MenuView'
@@ -30,6 +36,10 @@ import ReservationDetail from './pages/ReservationDetail'
 import RestaurantOverview from './pages/RestaurantOverview'
 import { SocketProvider } from './context/SocketContext'
 import ManagerLayout from './components/ManagerLayout'
+import HostLayout from './components/HostLayout'
+import WaiterLayout from './components/WaiterLayout'
+import CashierBilling from './pages/CashierBilling'
+import ChefKitchen from './pages/ChefKitchen'
 
 function App() {
   return (
@@ -71,10 +81,31 @@ function App() {
                 <Route path="/manager/reports" element={<ManagerReports />} />
               </Route>
             </Route>
-            <Route path="/waiter" element={<Dashboard role="waiter" />} />
-            <Route path="/chef" element={<Dashboard role="chef" />} />
-            <Route path="/cashier" element={<Dashboard role="cashier" />} />
-            <Route path="/host" element={<Dashboard role="host" />} />
+            <Route element={<ProtectedRoute role="host" />}>
+              <Route element={<HostLayout />}>
+                <Route path="/host" element={<HostFloor />} />
+                <Route path="/host/floor" element={<HostFloor />} />
+                <Route path="/host/walkin" element={<HostWalkin />} />
+                <Route path="/host/waitlist" element={<HostWaitlist />} />
+                <Route path="/host/approvals" element={<ManagerApprovals />} />
+              </Route>
+            </Route>
+            <Route element={<ProtectedRoute role="waiter" />}>
+              <Route element={<WaiterLayout />}>
+                <Route path="/waiter" element={<WaiterTables />} />
+                <Route path="/waiter/tables" element={<WaiterTables />} />
+                <Route path="/waiter/tables/:id/order" element={<WaiterOrder />} />
+                <Route path="/waiter/pickup" element={<WaiterPickup />} />
+              </Route>
+            </Route>
+            <Route element={<ProtectedRoute role="chef" />}>
+              <Route path="/chef" element={<ChefKitchen />} />
+              <Route path="/chef/kitchen" element={<ChefKitchen />} />
+            </Route>
+            <Route element={<ProtectedRoute role="cashier" />}>
+              <Route path="/cashier" element={<CashierBilling />} />
+              <Route path="/cashier/billing" element={<CashierBilling />} />
+            </Route>
           </Route>
           </Routes>
         </BrowserRouter>

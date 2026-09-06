@@ -1,4 +1,5 @@
 const Table = require("../models/Table");
+const User = require("../models/User");
 
 const handleDuplicateTableError = (res, err) => {
   if (err?.code === 11000) {
@@ -65,6 +66,80 @@ exports.getTable = async (req, res) => {
   if (!table) return res.status(404).json({ message: "Table not found" });
 
   res.json(table);
+};
+
+// GET tables assigned to the authenticated waiter
+exports.getMyTables = async (req, res) => {
+  try {
+    const tables = await Table.find({
+      restaurantId: req.user.restaurantId,
+      assignedWaiter: req.user._id
+    }).sort({ number: 1 });
+
+    return res.json(tables);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+// ASSIGN OR UNASSIGN A WAITER
+exports.assignWaiter = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const { waiterId } = body;
+    if (!Object.prototype.hasOwnProperty.call(body, "waiterId")) {
+      return res.status(400).json({ message: "waiterId is required and must be a waiter ID or null" });
+    }
+    if (waiterId !== null && !waiterId) {
+      return res.status(400).json({ message: "waiterId must be a waiter ID or null" });
+    }
+
+    const table = await Table.findOne({ _id: req.params.id, restaurantId: req.restaurantId });
+    if (!table) return res.status(404).json({ message: "Table not found" });
+
+    if (waiterId === null) {
+      table.assignedWaiter = null;
+    } else {
+      const waiter = await User.findOne({
+        _id: waiterId,
+        role: "waiter",
+        restaurantId: req.restaurantId
+      }).select("_id");
+
+      if (!waiter) {
+        return res.status(400).json({ message: "waiterId must belong to a waiter in the same restaurant" });
+      }
+
+      table.assignedWaiter = waiter._id;
+    }
+
+    await table.save();
+    return res.json({ message: table.assignedWaiter ? "Waiter assigned" : "Waiter unassigned", table });
+  } catch (err) {
+    if (err?.name === "CastError") return res.status(400).json({ message: "waiterId must be a valid user ID or null" });
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+// HOST QUICK STATUS UPDATE
+exports.updateHostTableStatus = async (req, res) => {
+  try {
+    const { status } = req.body || {};
+    if (!["available", "cleaning"].includes(status)) {
+      return res.status(400).json({ message: "Only available or cleaning may be set manually; reserved and occupied are system-managed" });
+    }
+
+    const table = await Table.findOneAndUpdate(
+      { _id: req.params.id, restaurantId: req.restaurantId },
+      { status },
+      { new: true, runValidators: true }
+    );
+
+    if (!table) return res.status(404).json({ message: "Table not found" });
+    return res.json({ message: "Table status updated", table });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
 };
 
 

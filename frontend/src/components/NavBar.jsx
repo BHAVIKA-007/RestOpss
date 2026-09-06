@@ -18,6 +18,7 @@ function NavBar() {
       </Link>
       <nav className={styles.actions} aria-label="Account navigation">
         <span className={styles.greeting}>{user?.name || 'Welcome'}</span>
+        {user?.role === 'customer' && <Link to="/owner/restaurants/new" className={styles.ownerLink}>Own a restaurant?</Link>}
         <Link to="/account" className={styles.accountLink}>Account</Link>
         <button type="button" className={styles.logoutButton} onClick={handleLogout}>Log out</button>
       </nav>

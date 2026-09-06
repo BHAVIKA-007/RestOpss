@@ -6,6 +6,17 @@ const { emitToRestaurant } = require("../services/socketService");
 
 const LOCK_DURATION_MS = 10 * 60 * 1000;
 const NO_SHOW_GRACE_MINUTES = 15;
+const reservationStatuses = new Set(["locked", "confirmed", "seated", "completed", "cancelled", "no_show"]);
+
+const getDateRange = (date) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+
+  const [year, month, day] = date.split("-").map(Number);
+  const start = new Date(Date.UTC(year, month - 1, day));
+  if (start.getUTCFullYear() !== year || start.getUTCMonth() !== month - 1 || start.getUTCDate() !== day) return null;
+
+  return { $gte: start, $lt: new Date(start.getTime() + 24 * 60 * 60 * 1000) };
+};
 
 exports.createReservation = async (req, res) => {
   try {
@@ -248,6 +259,48 @@ exports.getMyReservations = async (req, res) => {
     res.json(reservations);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getRestaurantReservations = async (req, res) => {
+  try {
+    const filter = { restaurantId: req.restaurantId };
+
+    if (req.query.status !== undefined) {
+      if (typeof req.query.status !== "string") {
+        return res.status(400).json({ message: "status must be a comma-separated list" });
+      }
+      const statuses = req.query.status.split(",").map((status) => status.trim()).filter(Boolean);
+      if (!statuses.length || statuses.some((status) => !reservationStatuses.has(status))) {
+        return res.status(400).json({ message: "Invalid reservation status" });
+      }
+      filter.status = { $in: [...new Set(statuses)] };
+    }
+
+    if (req.query.requiresApproval !== undefined) {
+      if (typeof req.query.requiresApproval !== "string" || !["true", "false"].includes(req.query.requiresApproval)) {
+        return res.status(400).json({ message: "requiresApproval must be true or false" });
+      }
+      filter.requiresApproval = req.query.requiresApproval === "true";
+    }
+
+    if (req.query.date !== undefined) {
+      if (typeof req.query.date !== "string") {
+        return res.status(400).json({ message: "date must use the YYYY-MM-DD format" });
+      }
+      const dateRange = getDateRange(req.query.date);
+      if (!dateRange) return res.status(400).json({ message: "date must use the YYYY-MM-DD format" });
+      filter.timeSlot = dateRange;
+    }
+
+    const reservations = await Reservation.find(filter)
+      .populate("customer", "name email")
+      .populate("tables", "number")
+      .sort({ timeSlot: 1 });
+
+    return res.json(reservations);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
   }
 };
 

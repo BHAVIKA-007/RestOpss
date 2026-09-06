@@ -5,3 +5,11 @@
 .accepted, .preparing { color: #2d5c85; background: #e2effb; }
 .completed, .picked_up { color: #4d5260; background: #e7e8eb; }
 .cancelled, .no_show { color: #8c393b; background: #f8dfdf; }
+.waiter { color: #2d5c85; background: #e2effb; }
+.chef { color: #7a4d15; background: #fff0d7; }
+.cashier { color: #6b3f78; background: #f1e5f5; }
+.host { color: #287044; background: #e1f3e7; }
+.waiting { color: #8a5a00; background: #fff1c9; }
+.notified { color: #2d5c85; background: #e2effb; }
+.allocated { color: #287044; background: #e1f3e7; }
+.expired { color: #8c393b; background: #f8dfdf; }

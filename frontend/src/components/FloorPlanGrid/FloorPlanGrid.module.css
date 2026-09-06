@@ -1,6 +1,11 @@
 .viewport { overflow: auto; padding: 0.75rem; border-radius: 18px; background: #fafafa; }
-.grid { display: grid; gap: 0.65rem; min-width: max-content; min-height: 250px; padding: 1rem; background-image: linear-gradient(#e7e7e7 1px, transparent 1px), linear-gradient(90deg, #e7e7e7 1px, transparent 1px); background-size: 25px 25px; }
-.table { z-index: 1; display: flex; min-width: 58px; min-height: 58px; align-items: center; justify-content: center; flex-direction: column; gap: 0.1rem; border: 2px solid transparent; color: var(--color-dark); cursor: pointer; font: inherit; }
+.builderViewport { border: 1px solid #e1e1e1; }
+.compact { padding: 0.4rem; }
+.grid { position: relative; display: grid; gap: 0.65rem; min-width: max-content; min-height: 250px; padding: 1rem; background-image: linear-gradient(#e7e7e7 1px, transparent 1px), linear-gradient(90deg, #e7e7e7 1px, transparent 1px); background-size: 25px 25px; }
+.cell { z-index: 0; min-width: 58px; min-height: 58px; padding: 0; border: 1px solid transparent; background: rgba(255, 255, 255, 0.18); cursor: crosshair; }
+.cell:hover { border-color: rgba(230, 66, 69, 0.45); background: rgba(230, 66, 69, 0.08); }
+.cell:disabled { cursor: default; }
+.table { z-index: 2; display: flex; min-width: 58px; min-height: 58px; align-items: center; justify-content: center; flex-direction: column; gap: 0.1rem; border: 2px solid transparent; color: var(--color-dark); cursor: pointer; font: inherit; }
 .table strong { font-size: 0.82rem; }
 .table small { font-size: 0.58rem; }
 .square, .rect { border-radius: 12px; }
@@ -8,9 +13,16 @@
 .round { border-radius: 50%; }
 .available { background: #cfe8d6; border-color: #82bb90; }
 .unavailable { background: #dedfe1; border-color: #b6b7ba; color: #777; cursor: not-allowed; }
+.table:disabled { opacity: 1; }
 .selected { border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(230, 66, 69, 0.2); transform: translateY(-2px); }
-.element { z-index: 0; display: grid; place-items: center; color: var(--color-dark); font-size: 0.58rem; font-weight: 800; }
+.adjacent { outline: 3px solid #e6a842; outline-offset: 2px; }
+.element { z-index: 1; display: grid; place-items: center; width: 100%; height: 100%; padding: 0; border: 0; color: var(--color-dark); font-size: 0.58rem; font-weight: 800; }
+.element:disabled { opacity: 1; }
 .wall { background: var(--color-dark); }
 .window { border: 2px solid #5b9fc8; border-radius: 50%; color: #5b9fc8; }
 .door { border: 2px solid #b28a4a; border-radius: 50%; color: #b28a4a; }
 .divider { border-top: 2px dashed #999; }
+.compact .grid { gap: 0.3rem; padding: 0.55rem; }
+.compact .table, .compact .cell { min-width: 38px; min-height: 38px; }
+.compact .table strong { font-size: 0.65rem; }
+.compact .table small { font-size: 0.45rem; }

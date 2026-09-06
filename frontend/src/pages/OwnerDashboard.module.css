@@ -1,0 +1,32 @@
+.page { min-height: 100svh; background: var(--color-light-gray); }
+.content { width: min(100% - 2rem, 1160px); margin: 0 auto; padding: 2.5rem 0 5rem; }
+.heading { display: flex; align-items: end; justify-content: space-between; gap: 2rem; margin: 3rem 0 2.5rem; }
+.eyebrow { margin: 0 0 0.75rem; color: var(--color-accent); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.heading h1 { margin: 0 0 0.7rem; font-family: var(--font-display); font-size: clamp(2.7rem, 7vw, 5rem); font-weight: 500; letter-spacing: -0.05em; line-height: 0.95; }
+.heading p:last-child { margin: 0; color: var(--color-muted); }
+.primaryButton { display: inline-flex; align-items: center; justify-content: center; padding: 0.85rem 1.1rem; border-radius: 999px; color: var(--color-white); background: var(--color-accent); font-size: 0.8rem; font-weight: 800; text-decoration: none; white-space: nowrap; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.restaurantCard, .newCard { border-radius: 18px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.restaurantCard { overflow: hidden; }
+.cardBody { position: relative; display: block; width: 100%; min-height: 190px; padding: 1.5rem; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+.cardBody:hover h2 { color: var(--color-accent); }
+.cardKicker, .footerLabel { display: block; color: var(--color-muted); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.cardBody h2 { max-width: 85%; margin: 1.7rem 0 0.55rem; font-family: var(--font-display); font-size: 1.8rem; font-weight: 500; line-height: 1; transition: color 160ms ease; }
+.cardBody p { max-width: 85%; margin: 0; color: var(--color-muted); font-size: 0.82rem; line-height: 1.45; }
+.cardArrow { position: absolute; top: 1.35rem; right: 1.5rem; color: var(--color-accent); font-size: 1.4rem; }
+.cardFooter { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding: 1rem 1.5rem; border-top: 1px solid var(--color-light-gray); }
+.cardFooter strong, .muted { display: block; margin-top: 0.3rem; font-size: 0.83rem; }
+.muted { color: var(--color-muted); font-style: italic; }
+.manageLink { color: var(--color-accent); font-size: 0.76rem; font-weight: 800; text-decoration: none; white-space: nowrap; }
+.stats { display: flex; gap: 0.75rem; padding: 0.85rem 1.5rem 1.15rem; color: var(--color-muted); font-size: 0.68rem; }
+.newCard { min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.8rem; border: 1px dashed #c4c4c4; color: var(--color-dark); text-align: center; text-decoration: none; }
+.newCard strong { font-size: 0.84rem; }
+.emptyMark { display: grid; width: 2.2rem; height: 2.2rem; place-items: center; border-radius: 50%; color: var(--color-accent); background: #fff0f0; font-size: 1.4rem; }
+.emptyState { max-width: 620px; margin: 4rem auto; padding: 3.5rem 2rem; border-radius: 20px; background: var(--color-white); box-shadow: var(--shadow-card); text-align: center; }
+.emptyState .emptyMark { margin: 0 auto 1.5rem; }
+.emptyState h2 { margin: 0 0 0.6rem; font-family: var(--font-display); font-size: 2.2rem; font-weight: 500; }
+.emptyState > p:not(.eyebrow) { margin: 0 auto 1.5rem; max-width: 390px; color: var(--color-muted); line-height: 1.5; }
+.status { color: var(--color-muted); }
+.error { padding: 1rem; border-radius: 12px; color: #a6292c; background: #fff0f0; }
+@media (max-width: 850px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .content { padding-top: 1rem; } .heading { align-items: start; flex-direction: column; margin-top: 2.5rem; } .grid { grid-template-columns: 1fr; } }

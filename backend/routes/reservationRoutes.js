@@ -11,10 +11,11 @@ const {
   cancelReservation,
   seatReservation,
   completeReservation,
-  markNoShow
+  markNoShow,
+  getRestaurantReservations
 } = require("../controllers/reservationController");
 
-const { auth, isManagerOrOwnerOfRestaurant, isWaiter } = require("../middleware/auth");
+const { auth, isManagerOrOwnerOfRestaurant, isManagerHostOrOwnerOfRestaurant, isWaiter } = require("../middleware/auth");
 
 const allowHostOrWaiter = (req, res, next) => {
   if (!req.user) return res.status(401).json({ message: "Unauthorized" });
@@ -29,6 +30,8 @@ const allowManagerOrHost = (req, res, next) => {
 };
 
 router.post("/", auth, createReservation);
+
+router.get("/", auth, isManagerHostOrOwnerOfRestaurant, getRestaurantReservations);
 
 router.get("/suggest-combination", auth, suggestCombination);
 

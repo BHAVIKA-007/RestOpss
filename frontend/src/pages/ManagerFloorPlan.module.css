@@ -1,0 +1,25 @@
+.toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: 1rem; margin-bottom: 0.75rem; padding: 0.9rem; border-radius: 14px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.toolGroup { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.groupLabel { display: block; margin-bottom: 0.45rem; color: var(--color-muted); font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.toolGroup .groupLabel { margin: 0 0.25rem 0 0; }
+.toolButton, .secondaryButton, .deleteButton, .saveButton { padding: 0.65rem 0.8rem; border: 0; border-radius: 8px; cursor: pointer; font-size: 0.74rem; font-weight: 800; }
+.toolButton, .secondaryButton { color: var(--color-dark); background: var(--color-light-gray); }
+.toolButton:hover, .active { color: var(--color-white); background: var(--color-dark); }
+.tableOptions { display: flex; gap: 0.6rem; }
+.tableOptions label, .editPanel label { display: grid; gap: 0.3rem; color: var(--color-muted); font-size: 0.68rem; font-weight: 800; }
+.tableOptions select, .tableOptions input, .editPanel select, .editPanel input { min-width: 70px; padding: 0.55rem; border: 1px solid #d8d8d8; border-radius: 7px; background: #fff; font-size: 0.78rem; }
+.saveButton { margin-left: auto; color: var(--color-white); background: var(--color-accent); }
+.saveButton:disabled { cursor: wait; opacity: 0.6; }
+.instruction { margin: 0.7rem 0; color: var(--color-accent); font-size: 0.78rem; font-weight: 700; }
+.success { padding: 0.8rem 1rem; border-radius: 10px; color: #287044; background: #e1f3e7; font-size: 0.8rem; }
+.builderLayout { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 1rem; align-items: start; }
+.canvasPanel, .editPanel { padding: 0.9rem; border-radius: 16px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.canvasHint, .helpText { margin: 0.75rem 0 0; color: var(--color-muted); font-size: 0.72rem; line-height: 1.45; }
+.editPanel { display: grid; gap: 0.8rem; }
+.editPanel h2 { margin: 0; font-family: var(--font-display); font-size: 1.6rem; font-weight: 500; }
+.checkLabel { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 0.5rem !important; }
+.checkLabel input { min-width: auto; }
+.secondaryButton { text-align: left; }
+.deleteButton { color: #a6292c; background: #fff0f0; }
+@media (max-width: 860px) { .builderLayout { grid-template-columns: 1fr; } .editPanel { grid-template-columns: repeat(2, minmax(0, 1fr)); } .editPanel .groupLabel, .editPanel h2, .editPanel .helpText { grid-column: 1 / -1; } }
+@media (max-width: 580px) { .toolbar { align-items: stretch; flex-direction: column; } .saveButton { margin-left: 0; } .editPanel { grid-template-columns: 1fr; } }

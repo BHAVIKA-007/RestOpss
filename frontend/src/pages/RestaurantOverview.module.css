@@ -1,0 +1,25 @@
+.page { min-height: 100svh; background: var(--color-light-gray); }
+.content { width: min(100% - 2rem, 1160px); margin: 0 auto; padding: 2.5rem 0 5rem; }
+.backLink { color: var(--color-dark); font-size: 0.82rem; font-weight: 800; text-decoration: none; }
+.heading { display: flex; align-items: end; justify-content: space-between; gap: 2rem; margin: 3.5rem 0 2.5rem; }
+.eyebrow, .sectionKicker { margin: 0 0 0.7rem; color: var(--color-accent); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.heading h1 { margin: 0 0 0.65rem; font-family: var(--font-display); font-size: clamp(2.8rem, 7vw, 5.2rem); font-weight: 500; letter-spacing: -0.05em; line-height: 0.95; }
+.heading p:last-child { margin: 0; color: var(--color-muted); }
+.manageLink { color: var(--color-accent); font-size: 0.8rem; font-weight: 800; text-decoration: none; white-space: nowrap; }
+.sections { display: grid; gap: 1rem; }
+.section { padding: clamp(1.2rem, 3vw, 2rem); border-radius: 18px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.sectionHeading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; margin-bottom: 1.4rem; }
+.sectionKicker { margin-bottom: 0.35rem; }
+.sectionHeading h2 { margin: 0; font-family: var(--font-display); font-size: 2rem; font-weight: 500; }
+.readOnly { padding: 0.35rem 0.6rem; border-radius: 999px; color: var(--color-muted); background: var(--color-light-gray); font-size: 0.65rem; font-weight: 800; text-transform: uppercase; }
+.status { color: var(--color-muted); }
+.unavailable, .error { padding: 0.9rem 1rem; border-radius: 12px; color: #8a5a00; background: #fff5d9; font-size: 0.84rem; }
+.error { color: #a6292c; background: #fff0f0; }
+.category + .category { margin-top: 1.2rem; }
+.category h3 { margin: 0 0 0.4rem; color: var(--color-accent); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.menuItem, .staffRow { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.85rem 0; border-top: 1px solid var(--color-light-gray); }
+.menuItem strong, .staffRow strong { font-size: 0.9rem; }
+.menuItem p, .staffRow p { margin: 0.25rem 0 0; color: var(--color-muted); font-size: 0.78rem; }
+.menuItem > span { white-space: nowrap; font-weight: 800; }
+.staffList { max-width: 760px; }
+@media (max-width: 640px) { .heading { align-items: start; flex-direction: column; } .manageLink { align-self: start; } }

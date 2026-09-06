@@ -36,13 +36,19 @@ export function AuthProvider({ children }) {
     return currentUser
   }
 
+  async function refreshUser() {
+    const currentUser = await getCurrentUser()
+    setUser(currentUser)
+    return currentUser
+  }
+
   function logout() {
     clearStoredToken()
     setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, refreshUser, logout }}>
       {children}
     </AuthContext.Provider>
   )

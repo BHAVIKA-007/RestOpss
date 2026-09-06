@@ -1,0 +1,16 @@
+.page { min-height: 100svh; background: var(--color-light-gray); }
+.content { width: min(100% - 2rem, 760px); margin: 0 auto; padding: 2.5rem 0 5rem; }
+.backLink { color: var(--color-dark); font-size: 0.82rem; font-weight: 800; text-decoration: none; }
+.formPanel { margin: 3.5rem 0 0; padding: clamp(1.5rem, 5vw, 3rem); border-radius: 20px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.eyebrow { margin: 0 0 0.75rem; color: var(--color-accent); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+h1 { margin: 0; font-family: var(--font-display); font-size: clamp(2.6rem, 7vw, 4.7rem); font-weight: 500; letter-spacing: -0.05em; line-height: 0.98; }
+.intro { max-width: 470px; margin: 1rem 0 2.3rem; color: var(--color-muted); line-height: 1.5; }
+form { display: grid; gap: 0.6rem; }
+label { margin-top: 0.75rem; font-size: 0.78rem; font-weight: 800; }
+label span { color: var(--color-accent); }
+label small { margin-left: 0.35rem; color: var(--color-muted); font-weight: 400; }
+input { width: 100%; padding: 0.9rem 1rem; border: 1px solid #d8d8d8; border-radius: 10px; color: var(--color-dark); background: #fcfcfc; outline: none; }
+input:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(230, 66, 69, 0.12); }
+.submitButton { justify-self: start; margin-top: 1rem; padding: 0.9rem 1.2rem; border: 0; border-radius: 999px; color: var(--color-white); background: var(--color-accent); cursor: pointer; font-weight: 800; }
+.submitButton:disabled { cursor: wait; opacity: 0.65; }
+.error { margin: 0.8rem 0 0; color: #a6292c; font-size: 0.82rem; }

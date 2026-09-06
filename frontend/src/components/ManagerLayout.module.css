@@ -1,0 +1,14 @@
+.page { min-height: 100svh; background: var(--color-light-gray); }
+.workspace { display: grid; grid-template-columns: 220px minmax(0, 1fr); width: min(100% - 2rem, 1240px); margin: 0 auto; gap: 2.5rem; }
+.sidebar { padding: 1.25rem 0 3rem; }
+.sideHeading { padding: 0.7rem 0 1.35rem; }
+.sideHeading strong { display: block; margin-top: 0.35rem; font-family: var(--font-display); font-size: 1.5rem; font-weight: 500; }
+.kicker { color: var(--color-accent); font-size: 0.65rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.sidebar nav { display: grid; gap: 0.25rem; }
+.navLink { display: flex; align-items: center; gap: 0.65rem; padding: 0.68rem 0.75rem; border-radius: 8px; color: var(--color-muted); font-size: 0.8rem; font-weight: 700; text-decoration: none; }
+.navLink:hover, .active { color: var(--color-dark); background: var(--color-white); box-shadow: 0 7px 20px rgba(34, 34, 34, 0.05); }
+.active { color: var(--color-accent); }
+.navDot { width: 0.35rem; height: 0.35rem; border-radius: 50%; background: currentColor; opacity: 0.45; }
+.active .navDot { opacity: 1; }
+.main { min-width: 0; padding: 2.5rem 0 5rem; }
+@media (max-width: 760px) { .workspace { display: block; width: min(100% - 2rem, 620px); } .sidebar { padding-bottom: 0; overflow-x: auto; } .sideHeading { padding-bottom: 0.8rem; } .sidebar nav { display: flex; min-width: max-content; gap: 0.25rem; } .navLink { padding-inline: 0.65rem; } .navDot { display: none; } .main { padding-top: 2rem; } }

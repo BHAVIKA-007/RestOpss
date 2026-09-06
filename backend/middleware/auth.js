@@ -78,6 +78,37 @@ exports.isManagerOrOwnerOfRestaurant = async (req, res, next) => {
   } catch (err) { return res.status(500).json({ message: err.message }); }
 };
 
+exports.isManagerHostOrOwnerOfRestaurant = async (req, res, next) => {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+  try {
+    const isStaffScopedRole = req.user.role === "manager" || req.user.role === "host";
+    const restaurantId = isStaffScopedRole ? req.user.restaurantId : req.query.restaurantId;
+
+    if (!restaurantId) {
+      return res.status(400).json({ message: "restaurantId query parameter is required for owners" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(restaurantId.toString())) {
+      return res.status(400).json({ message: "Invalid restaurantId" });
+    }
+
+    const restaurant = await Restaurant.findById(restaurantId).select("owner");
+    if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
+
+    const isOwner = req.user.role === "owner" && restaurant.owner.equals(req.user._id);
+    const isManagerOrHost = isStaffScopedRole && req.user.restaurantId?.toString() === restaurant._id.toString();
+    if (!isOwner && !isManagerOrHost) {
+      return res.status(403).json({ message: "Only the restaurant owner, manager, or host can view reservations" });
+    }
+
+    req.restaurantId = restaurant._id;
+    next();
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
 exports.isManagerOrWaiter = (req, res, next) => {
   if (req.user.role === "manager" || req.user.role === "waiter") return next();
   return res.status(403).json({ message: "Only manager or waiter allowed" });

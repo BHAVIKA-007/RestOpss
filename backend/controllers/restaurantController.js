@@ -69,7 +69,9 @@ exports.getPublicRestaurant = async (req, res) => {
 
 exports.getMyRestaurant = async (req, res) => {
   try {
-    const restaurants = await Restaurant.find({ owner: req.user._id }).populate("manager");
+    const restaurants = await Restaurant.find({ owner: req.user._id })
+      .populate("manager", "name email")
+      .populate("owner", "name email");
     res.json(restaurants);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -78,7 +80,9 @@ exports.getMyRestaurant = async (req, res) => {
 
 exports.getMyRestaurants = async (req, res) => {
   try {
-    const restaurants = await Restaurant.find({ owner: req.user._id }).populate("manager");
+    const restaurants = await Restaurant.find({ owner: req.user._id })
+      .populate("manager", "name email")
+      .populate("owner", "name email");
     res.json(restaurants);
   } catch (err) {
     res.status(500).json({ message: err.message });

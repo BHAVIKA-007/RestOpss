@@ -42,6 +42,13 @@
   text-decoration: none;
 }
 
+.ownerLink {
+  color: var(--color-accent);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
 .logoutButton {
   padding: 0.6rem 0.9rem;
   border: 0;

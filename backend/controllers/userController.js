@@ -60,3 +60,24 @@ exports.loginUser = async (req, res) => {
 exports.getMe = async (req, res) => {
   return res.json(req.user); // auth middleware injects user
 };
+
+// LOOK UP USER BY EMAIL
+exports.lookupUser = async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await User.findOne({ email }).select("_id name email role");
+    if (!user) {
+      return res.status(404).json({ message: "No user found with that email" });
+    }
+
+    return res.json(user);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Server Error" });
+  }
+};

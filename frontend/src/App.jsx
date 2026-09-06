@@ -5,18 +5,31 @@ import Account from './pages/Account'
 import Booking from './pages/Booking'
 import BookingTables from './pages/BookingTables'
 import Dashboard from './pages/Dashboard'
+import CreateRestaurant from './pages/CreateRestaurant'
 import Discovery from './pages/Discovery'
+import ManagerApprovals from './pages/ManagerApprovals'
+import ManagerDashboard from './pages/ManagerDashboard'
+import ManagerFloorPlan from './pages/ManagerFloorPlan'
+import ManagerMenu from './pages/ManagerMenu'
+import ManagerReports from './pages/ManagerReports'
+import ManagerReservations from './pages/ManagerReservations'
+import ManagerStaff from './pages/ManagerStaff'
+import ManagerWaitlist from './pages/ManagerWaitlist'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import MenuView from './pages/MenuView'
 import MyOrders from './pages/MyOrders'
 import MyReservations from './pages/MyReservations'
+import ManagerAssignment from './pages/ManagerAssignment'
+import OwnerDashboard from './pages/OwnerDashboard'
 import PlaceOrder from './pages/PlaceOrder'
 import RestaurantDetail from './pages/RestaurantDetail'
 import Register from './pages/Register'
 import ReservationConfirm from './pages/ReservationConfirm'
 import ReservationDetail from './pages/ReservationDetail'
+import RestaurantOverview from './pages/RestaurantOverview'
 import { SocketProvider } from './context/SocketContext'
+import ManagerLayout from './components/ManagerLayout'
 
 function App() {
   return (
@@ -40,8 +53,24 @@ function App() {
             <Route path="/reservations/:id" element={<ReservationDetail />} />
             <Route path="/reservations/:id/order" element={<PlaceOrder />} />
             <Route path="/orders/mine" element={<MyOrders />} />
-            <Route path="/owner" element={<Dashboard role="owner" />} />
-            <Route path="/manager" element={<Dashboard role="manager" />} />
+            <Route path="/owner/restaurants/new" element={<CreateRestaurant />} />
+            <Route element={<ProtectedRoute role="owner" />}>
+              <Route path="/owner" element={<OwnerDashboard />} />
+              <Route path="/owner/restaurants/:id/manager" element={<ManagerAssignment />} />
+              <Route path="/owner/restaurants/:id/overview" element={<RestaurantOverview />} />
+            </Route>
+            <Route element={<ProtectedRoute role="manager" />}>
+              <Route element={<ManagerLayout />}>
+                <Route path="/manager" element={<ManagerDashboard />} />
+                <Route path="/manager/floor-plan" element={<ManagerFloorPlan />} />
+                <Route path="/manager/staff" element={<ManagerStaff />} />
+                <Route path="/manager/menu" element={<ManagerMenu />} />
+                <Route path="/manager/approvals" element={<ManagerApprovals />} />
+                <Route path="/manager/reservations" element={<ManagerReservations />} />
+                <Route path="/manager/waitlist" element={<ManagerWaitlist />} />
+                <Route path="/manager/reports" element={<ManagerReports />} />
+              </Route>
+            </Route>
             <Route path="/waiter" element={<Dashboard role="waiter" />} />
             <Route path="/chef" element={<Dashboard role="chef" />} />
             <Route path="/cashier" element={<Dashboard role="cashier" />} />

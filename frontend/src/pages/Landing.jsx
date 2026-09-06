@@ -75,7 +75,7 @@ function Landing() {
             <h2>Your tables, running beautifully.</h2>
             <p>Bring reservations, staff, and service into one calm, clear place.</p>
           </div>
-          <Link to="/register" className={styles.ownerButton}>Grow with RestOps <span aria-hidden="true">&#8594;</span></Link>
+          <Link to="/owner/restaurants/new" className={styles.ownerButton}>Own a restaurant? Get started <span aria-hidden="true">&#8594;</span></Link>
         </section>
       </main>
 

@@ -22,22 +22,51 @@ function PlaceOrder() {
   const [order, setOrder] = useState(null)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [menuLoaded, setMenuLoaded] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
-    Promise.all([getMyReservations(), getMenuByRestaurantId(id)])
-      .then(([reservations, menuItems]) => {
+    let isCurrent = true
+
+    async function loadOrderData() {
+      setIsLoading(true)
+      setMenuLoaded(false)
+      setError('')
+
+      try {
+        const reservations = await getMyReservations()
         const found = reservations.find((item) => getId(item) === id)
-        if (!found) throw new Error('Reservation not found')
+
+        if (!found) {
+          console.warn(`[PlaceOrder] Reservation ${id} was not found in /reservations/my.`)
+          throw new Error('Reservation not found in your reservations.')
+        }
+
+        const restaurantId = getId(found.restaurantId)
+        if (!restaurantId) {
+          throw new Error('This reservation does not include a restaurant ID, so its menu cannot be loaded.')
+        }
+
+        const menuItems = await getMenuByRestaurantId(restaurantId)
+        if (!isCurrent) return
+
         setReservation(found)
         setMenu(menuItems)
+        setMenuLoaded(true)
         const initial = Object.fromEntries((location.state?.preOrder || []).map((item) => [item.menuItemId, item.quantity]))
         setQuantities(initial)
-        joinRestaurantRoom(getId(found.restaurantId))
-      })
-      .catch((requestError) => setError(requestError.message || 'Unable to load the order page.'))
-      .finally(() => setIsLoading(false))
-  }, [id, joinRestaurantRoom, location.state])
+        joinRestaurantRoom(restaurantId)
+      } catch (requestError) {
+        if (isCurrent) setError(requestError.message || 'Unable to load the order page.')
+      } finally {
+        if (isCurrent) setIsLoading(false)
+      }
+    }
+
+    loadOrderData()
+    return () => { isCurrent = false }
+  }, [id, joinRestaurantRoom, location.state, retryKey])
 
   const updateFromSocket = useCallback((event, nextStatus) => {
     if (order && event.orderId === getId(order)) setOrder((current) => ({ ...current, status: nextStatus }))
@@ -84,11 +113,11 @@ function PlaceOrder() {
     try { setOrder((await confirmOrderReceived(getId(order))).order) } catch (requestError) { setError(requestError.message) }
   }
 
-  if (isLoading) return <div className="routeLoading">Preparing your order...</div>
-  if (error && !reservation) return <div className={styles.page}><NavBar /><main className={styles.center}><h1>Order page unavailable</h1><p>{error}</p><Link to={`/reservations/${id}`}>Back to reservation</Link></main></div>
+  if (isLoading) return <div className="routeLoading">Loading your reservation and menu...</div>
+  if (error && !reservation) return <div className={styles.page}><NavBar /><main className={styles.center}><h1>We couldn&apos;t load this order page</h1><p>{error}</p><div className={styles.orderActions}><button type="button" onClick={() => setRetryKey((current) => current + 1)}>Try again</button><Link to={`/reservations/${id}`}>Back to reservation</Link></div></main></div>
   if (order) return <TrackingView order={order} onReceived={handleReceived} onOrders={() => navigate('/orders/mine')} />
 
-  return <div className={styles.page}><NavBar /><main className={styles.content}><Link to={`/reservations/${id}`} className={styles.backLink}>&larr; Back to reservation</Link><p className={styles.eyebrow}>Order for your table</p><h1>What are you in the mood for?</h1><p className={styles.intro}>Choose from the available menu. Your order will be sent after you place it.</p>{error && <p className={styles.error} role="alert">{error}</p>}<form onSubmit={submitOrder}>{Object.entries(groupedMenu).map(([category, items]) => <section className={styles.category} key={category}><h2>{category}</h2>{items.map((item) => <div className={styles.item} key={item._id}><span><strong>{item.name}</strong><small>{item.description || 'A house favorite.'}</small></span><div><b>{formatMoney(item.price)}</b><button type="button" onClick={() => changeQuantity(item._id, -1)}>-</button><em>{quantities[item._id] || 0}</em><button type="button" onClick={() => changeQuantity(item._id, 1)}>+</button></div></div>)}</section>)}<div className={styles.stickyBar}><span>{selectedItems.length} items &middot; <strong>{formatMoney(total)}</strong></span><button type="submit" disabled={!selectedItems.length || isSubmitting}>{isSubmitting ? 'Sending...' : 'Place order'}</button></div></form></main></div>
+  return <div className={styles.page}><NavBar /><main className={styles.content}><Link to={`/reservations/${id}`} className={styles.backLink}>&larr; Back to reservation</Link><p className={styles.eyebrow}>Order for your table</p><h1>What are you in the mood for?</h1><p className={styles.intro}>Choose from the available menu. Your order will be sent after you place it.</p>{error && <p className={styles.error} role="alert">{error}</p>}{menuLoaded && menu.length === 0 ? <section className={styles.empty}><h2>This restaurant hasn&apos;t added menu items yet</h2><p>There are no available dishes to order right now.</p></section> : <form onSubmit={submitOrder}>{Object.entries(groupedMenu).map(([category, items]) => <section className={styles.category} key={category}><h2>{category}</h2>{items.map((item) => <div className={styles.item} key={item._id}><span><strong>{item.name}</strong><small>{item.description || 'A house favorite.'}</small></span><div><b>{formatMoney(item.price)}</b><button type="button" onClick={() => changeQuantity(item._id, -1)}>-</button><em>{quantities[item._id] || 0}</em><button type="button" onClick={() => changeQuantity(item._id, 1)}>+</button></div></div>)}</section>)}<div className={styles.stickyBar}><span>{selectedItems.length} items &middot; <strong>{formatMoney(total)}</strong></span><button type="submit" disabled={!selectedItems.length || isSubmitting}>{isSubmitting ? 'Sending...' : 'Place order'}</button></div></form>}</main></div>
 }
 
 function TrackingView({ order, onReceived, onOrders }) {

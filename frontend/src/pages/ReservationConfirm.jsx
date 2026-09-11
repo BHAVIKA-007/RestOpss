@@ -4,7 +4,7 @@ import NavBar from '../components/NavBar'
 import StatusBadge from '../components/StatusBadge'
 import { useSocketEvent } from '../context/SocketContext'
 import { confirmReservation, getMyReservations } from '../services/reservationService'
-import { formatDateTime, getId } from '../utils/formatters'
+import { formatDateTime, getCustomerFacingStatusLabel, getId } from '../utils/formatters'
 import styles from './ReservationConfirm.module.css'
 
 function ReservationConfirm() {
@@ -79,7 +79,7 @@ function ReservationConfirm() {
         <h1>Hold your table.</h1>
         <p className={styles.intro}>{restaurantName}</p>
         <section className={styles.card}>
-          <div className={styles.cardTop}><span>Reservation details</span><StatusBadge status={reservation.status} /></div>
+          <div className={styles.cardTop}><span>Reservation details</span><StatusBadge status={reservation.status} label={getCustomerFacingStatusLabel(reservation.status, reservation.timeSlot, reservation.lockExpiresAt)} /></div>
           <dl><div><dt>When</dt><dd>{formatDateTime(reservation.timeSlot)}</dd></div><div><dt>Party</dt><dd>{reservation.partySize} guests</dd></div><div><dt>Tables</dt><dd>{reservation.tables.map((table) => getId(table)).join(', ')}</dd></div></dl>
         </section>
         {expired ? (

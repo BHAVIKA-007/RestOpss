@@ -10,3 +10,20 @@ export function formatMoney(value) {
 export function getId(value) {
   return typeof value === 'object' && value !== null ? value._id : value
 }
+
+const customerReservationStatusLabels = {
+  locked: 'Awaiting Confirmation',
+  confirmed: 'Confirmed',
+  seated: 'Seated',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+  no_show: 'No Show'
+}
+
+export function getCustomerFacingStatusLabel(status, timeSlot, lockExpiresAt) {
+  if (status === 'locked' && [timeSlot, lockExpiresAt].some((value) => value && new Date(value).getTime() < Date.now())) {
+    return 'Expired'
+  }
+
+  return customerReservationStatusLabels[status] || status.replace('_', ' ')
+}

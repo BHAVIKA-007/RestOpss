@@ -129,9 +129,9 @@ const updateDeliveryStatus = async (req, res, expected, status, eventName) => {
     if (!order) return res.status(404).json({ message: "Order not found" });
     if (order.restaurantId.toString() !== req.user.restaurantId?.toString()) return res.status(403).json({ message: "Cannot operate on an order from another restaurant" });
     if (order.status !== expected) return res.status(400).json({ message: `Order must be ${expected} before it can be ${status}` });
-    order.status = status;
+    order.status = status === "served" ? "completed" : status;
     await order.save();
-    emitToRestaurant(order.restaurantId.toString(), eventName, { orderId: order._id.toString(), restaurantId: order.restaurantId.toString() });
+    emitToRestaurant(order.restaurantId.toString(), eventName, { orderId: order._id.toString(), restaurantId: order.restaurantId.toString(), status: order.status });
     return res.json({ message: "Order updated", order });
   } catch (err) { return res.status(500).json({ message: err.message }); }
 };

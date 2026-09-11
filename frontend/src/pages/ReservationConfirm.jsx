@@ -54,6 +54,7 @@ function ReservationConfirm() {
     setError('')
     try {
       await confirmReservation(id)
+      if (preOrder.length > 0) sessionStorage.setItem(`preOrder:${id}`, JSON.stringify(preOrder))
       navigate('/reservations/mine', { replace: true })
     } catch (requestError) {
       setError(requestError.status === 409 || requestError.message.toLowerCase().includes('booked')

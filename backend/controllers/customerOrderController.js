@@ -28,8 +28,8 @@ exports.createCustomerOrder = async (req, res) => {
       return res.status(403).json({ message: "You can only order for your own reservation" });
     }
 
-    if (!["confirmed", "seated"].includes(reservation.status)) {
-      return res.status(400).json({ message: "Orders require a confirmed or seated reservation" });
+    if (reservation.status !== "seated") {
+      return res.status(400).json({ message: "You can order once you've been seated - please check in with the host" });
     }
 
     const invalidItems = items

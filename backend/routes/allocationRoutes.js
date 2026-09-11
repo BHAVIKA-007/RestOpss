@@ -3,6 +3,7 @@ const router = express.Router();
 
 const {
   allocateTable,
+  joinWaitlist,
   freeTable,
   getWaitingQueue,
   getWaitingQueueWithPosition,
@@ -15,6 +16,8 @@ const { auth, isManager, isWaiter, isManagerOrHost } = require("../middleware/au
 
 // Allocate → waiter + manager
 router.post("/allocate", auth, isWaiter, allocateTable);
+
+router.post("/waiting/join", auth, joinWaitlist);
 
 // Free → waiter + manager
 router.post("/free", auth, isWaiter, freeTable);

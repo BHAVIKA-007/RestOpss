@@ -13,11 +13,26 @@ function ProtectedRoute({ role }) {
     return <Navigate to="/login" replace state={{ from: location }} />
   }
 
+  if (user.mustChangePassword && location.pathname !== '/change-password-required') {
+    return <Navigate to="/change-password-required" replace />
+  }
+
   if (role && user.role !== role) {
     return <Navigate to={`/${user.role}`} replace />
   }
 
   return <Outlet />
+}
+
+export function PasswordChangeGate() {
+  const { user, isLoading } = useAuth()
+  const location = useLocation()
+
+  if (!isLoading && user?.mustChangePassword && location.pathname !== '/change-password-required') {
+    return <Navigate to="/change-password-required" replace />
+  }
+
+  return null
 }
 
 export default ProtectedRoute

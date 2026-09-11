@@ -48,3 +48,30 @@ test('buildCombinationCandidates ignores disconnected and non-combinable groups'
 
   assert.deepEqual(result, []);
 });
+
+test('buildCombinationCandidates includes a fitting non-combinable singleton', () => {
+  const tables = [
+    { _id: 'single', capacity: 4, combinable: false, adjacentTo: [] },
+    { _id: 'joinable', capacity: 2, combinable: true, adjacentTo: [] }
+  ];
+
+  const result = buildCombinationCandidates({
+    tables,
+    combinableTables: tables.filter((table) => table.combinable),
+    partySize: 4
+  });
+
+  assert.deepEqual(result[0].tableIds, ['single']);
+  assert.equal(result[0].overshoot, 0);
+});
+
+test('buildCombinationCandidates does not fall back to oversized tables', () => {
+  const result = buildCombinationCandidates({
+    tables: [{ _id: 'eight-top', capacity: 8, combinable: false, adjacentTo: [] }],
+    combinableTables: [],
+    partySize: 2,
+    overshootCap: Math.max(2, Math.ceil(2 / 2))
+  });
+
+  assert.deepEqual(result, []);
+});

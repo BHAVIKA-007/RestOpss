@@ -29,6 +29,7 @@ exports.createStaff = async (req, res) => {
       name,
       email: normalizedEmail,
       password,
+      mustChangePassword: true,
       role,
       restaurantId: req.restaurantId
     });

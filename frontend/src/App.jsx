@@ -1,5 +1,5 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import ProtectedRoute from './components/ProtectedRoute'
+import ProtectedRoute, { PasswordChangeGate } from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
 import Account from './pages/Account'
 import Booking from './pages/Booking'
@@ -40,12 +40,14 @@ import HostLayout from './components/HostLayout'
 import WaiterLayout from './components/WaiterLayout'
 import CashierBilling from './pages/CashierBilling'
 import ChefKitchen from './pages/ChefKitchen'
+import ChangePasswordRequired from './pages/ChangePasswordRequired'
 
 function App() {
   return (
     <AuthProvider>
       <SocketProvider>
         <BrowserRouter>
+          <PasswordChangeGate />
           <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
@@ -55,6 +57,7 @@ function App() {
           <Route path="/restaurants/:id" element={<RestaurantDetail />} />
           <Route path="/restaurants/:id/menu" element={<MenuView />} />
           <Route element={<ProtectedRoute />}>
+            <Route path="/change-password-required" element={<ChangePasswordRequired />} />
             <Route path="/account" element={<Account />} />
             <Route path="/restaurants/:id/book" element={<Booking />} />
             <Route path="/restaurants/:id/book/tables" element={<BookingTables />} />

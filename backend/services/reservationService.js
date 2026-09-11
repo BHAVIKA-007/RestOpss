@@ -1,13 +1,15 @@
 const Reservation = require("../models/Reservation");
 const Table = require("../models/Table");
 
+const CUSTOMER_OVERSHOOT_CAP = (partySize) => Math.max(2, Math.ceil(partySize / 2));
+
 const normalizeTableId = (value) => value?.toString?.() ?? String(value);
 
 const buildCandidateKey = (tableIds) => [...tableIds].sort().join("|");
 
 const sumCapacities = (tables) => tables.reduce((total, table) => total + Number(table.capacity || 0), 0);
 
-const buildCombinationCandidates = ({ tables, partySize, maxTables = 4 }) => {
+const buildCombinationCandidates = ({ tables, combinableTables = tables, partySize, maxTables = 4, overshootCap = null }) => {
   if (!Array.isArray(tables) || tables.length === 0) return [];
 
   const parsedPartySize = Number(partySize);
@@ -19,14 +21,19 @@ const buildCombinationCandidates = ({ tables, partySize, maxTables = 4 }) => {
   for (const table of tables) {
     const tableId = normalizeTableId(table._id);
     tableMap.set(tableId, table);
-    adjacency.set(tableId, new Set());
   }
 
-  for (const table of tables) {
+  for (const table of combinableTables) {
+    const tableId = normalizeTableId(table._id);
+    if (tableMap.has(tableId)) adjacency.set(tableId, new Set());
+  }
+
+  for (const table of combinableTables) {
     const currentId = normalizeTableId(table._id);
+    if (!adjacency.has(currentId)) continue;
     const adjacentIds = (table.adjacentTo || [])
       .map(normalizeTableId)
-      .filter((adjacentId) => tableMap.has(adjacentId) && adjacentId !== currentId);
+      .filter((adjacentId) => adjacency.has(adjacentId) && adjacentId !== currentId);
 
     for (const adjacentId of adjacentIds) {
       adjacency.get(currentId).add(adjacentId);
@@ -92,6 +99,7 @@ const buildCombinationCandidates = ({ tables, partySize, maxTables = 4 }) => {
       if (a.tableCount !== b.tableCount) return a.tableCount - b.tableCount;
       return a.tableIds.join(",").localeCompare(b.tableIds.join(","));
     })
+    .filter((candidate) => overshootCap === null || candidate.overshoot <= overshootCap)
     .slice(0, 3);
 };
 
@@ -130,7 +138,7 @@ exports.checkTableOverlap = async (tableIds, timeSlot, durationMinutes, excludeR
   return false;
 };
 
-exports.findTableCombinations = async (restaurantId, partySize, timeSlot, durationMinutes) => {
+exports.findTableCombinations = async (restaurantId, partySize, timeSlot, durationMinutes, { enforceOvershootCap = false } = {}) => {
   if (!restaurantId || !partySize || !timeSlot) return [];
 
   const parsedPartySize = Number(partySize);
@@ -139,11 +147,11 @@ exports.findTableCombinations = async (restaurantId, partySize, timeSlot, durati
   const requestedDuration = Number(durationMinutes || 90);
   if (!Number.isFinite(requestedDuration) || requestedDuration <= 0) return [];
 
-  const combinableTables = await Table.find({ restaurantId, combinable: true }).lean();
-  if (!combinableTables.length) return [];
+  const allTables = await Table.find({ restaurantId }).lean();
+  if (!allTables.length) return [];
 
   const freeTables = [];
-  for (const table of combinableTables) {
+  for (const table of allTables) {
     const tableId = normalizeTableId(table._id);
     const overlap = await exports.checkTableOverlap([tableId], timeSlot, requestedDuration);
     if (!overlap) {
@@ -153,15 +161,31 @@ exports.findTableCombinations = async (restaurantId, partySize, timeSlot, durati
 
   if (!freeTables.length) return [];
 
+  const combinableFreeTables = freeTables.filter((table) => table.combinable === true);
+
   return buildCombinationCandidates({
     tables: freeTables,
+    combinableTables: combinableFreeTables,
     partySize: parsedPartySize,
-    maxTables: 4
+    maxTables: 4,
+    overshootCap: enforceOvershootCap ? CUSTOMER_OVERSHOOT_CAP(parsedPartySize) : null
   });
+};
+
+exports.getCustomerOvershootCap = CUSTOMER_OVERSHOOT_CAP;
+
+exports.getTableAvailability = async (restaurantId, timeSlot, durationMinutes) => {
+  const tables = await Table.find({ restaurantId }).select("_id").lean();
+  return Promise.all(tables.map(async (table) => ({
+    tableId: normalizeTableId(table._id),
+    availableAtRequestedTime: !(await exports.checkTableOverlap([table._id], timeSlot, durationMinutes))
+  })));
 };
 
 module.exports = {
   checkTableOverlap: exports.checkTableOverlap,
   findTableCombinations: exports.findTableCombinations,
-  buildCombinationCandidates
+  buildCombinationCandidates,
+  getCustomerOvershootCap: exports.getCustomerOvershootCap,
+  getTableAvailability: exports.getTableAvailability
 };

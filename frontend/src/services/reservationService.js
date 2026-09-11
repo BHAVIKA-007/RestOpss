@@ -9,8 +9,17 @@ export function suggestCombination({ restaurantId, partySize, timeSlot, duration
   return apiRequest(`/reservations/suggest-combination?${params}`)
 }
 
+export function getTableAvailability({ restaurantId, timeSlot, durationMinutes = 90 }) {
+  const params = new URLSearchParams({ restaurantId, timeSlot, durationMinutes: String(durationMinutes) })
+  return apiRequest(`/reservations/table-availability?${params}`)
+}
+
 export function createReservation(payload) {
   return apiRequest('/reservations', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function joinWaitlist(restaurantId, groupSize) {
+  return apiRequest('/allocation/waiting/join', { method: 'POST', body: JSON.stringify({ restaurantId, groupSize }) })
 }
 
 export function getMyReservations() {

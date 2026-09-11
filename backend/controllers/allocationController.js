@@ -47,6 +47,28 @@ exports.freeTable = async (req, res) => {
   }
 };
 
+exports.joinWaitlist = async (req, res) => {
+  try {
+    const { restaurantId, groupSize } = req.body;
+    const parsedGroupSize = Number(groupSize);
+
+    if (!restaurantId || !parsedGroupSize || !Number.isInteger(parsedGroupSize) || parsedGroupSize < 1) {
+      return res.status(400).json({ message: "restaurantId and a positive groupSize are required" });
+    }
+
+    const entry = await WaitingQueue.create({ restaurantId, groupSize: parsedGroupSize, customer: req.user._id });
+    const position = await WaitingQueue.countDocuments({
+      restaurantId,
+      status: "waiting",
+      createdAt: { $lt: entry.createdAt }
+    });
+
+    return res.status(201).json({ status: entry.status, queueId: entry._id, position: position + 1 });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
 exports.getWaitingQueue = async (req, res) => {
   try {
     const restaurantId = req.user.restaurantId;

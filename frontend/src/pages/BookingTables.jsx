@@ -4,7 +4,7 @@ import NavBar from '../components/NavBar'
 import FloorPlanGrid from '../components/FloorPlanGrid/FloorPlanGrid'
 import { useSocket, useSocketEvent } from '../context/SocketContext'
 import { getMenuByRestaurantId } from '../services/restaurantService'
-import { createReservation, getFloorLayout, suggestCombination } from '../services/reservationService'
+import { createReservation, getFloorLayout, getTableAvailability, joinWaitlist, suggestCombination } from '../services/reservationService'
 import styles from './BookingTables.module.css'
 
 function BookingTables() {
@@ -22,12 +22,15 @@ function BookingTables() {
   const [tables, setTables] = useState([])
   const [elements, setElements] = useState([])
   const [suggestions, setSuggestions] = useState([])
-  const [selectedTableIds, setSelectedTableIds] = useState([])
   const [menu, setMenu] = useState([])
   const [quantities, setQuantities] = useState({})
   const [showMenu, setShowMenu] = useState(false)
   const [selectedSuggestion, setSelectedSuggestion] = useState(null)
+  const [hoveredSuggestion, setHoveredSuggestion] = useState(null)
+  const [availability, setAvailability] = useState({})
   const [isLoading, setIsLoading] = useState(true)
+  const [isJoiningWaitlist, setIsJoiningWaitlist] = useState(false)
+  const [waitlistMessage, setWaitlistMessage] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -49,11 +52,13 @@ function BookingTables() {
     Promise.all([
       getFloorLayout(id),
       suggestCombination({ restaurantId: id, partySize, timeSlot }),
+      getTableAvailability({ restaurantId: id, timeSlot }),
     ])
-      .then(([layout, rankedSuggestions]) => {
+      .then(([layout, rankedSuggestions, requestedAvailability]) => {
         setTables(layout.tables || [])
         setElements(layout.elements || [])
         setSuggestions(rankedSuggestions || [])
+        setAvailability(Object.fromEntries((requestedAvailability || []).map((item) => [item.tableId, item.availableAtRequestedTime])))
       })
       .catch((requestError) => setError(requestError.message || 'Unable to load table availability.'))
       .finally(() => setIsLoading(false))
@@ -64,22 +69,28 @@ function BookingTables() {
     getMenuByRestaurantId(id).then(setMenu).catch(() => setMenu([]))
   }, [id, showMenu])
 
-  const topIsSingle = suggestions[0]?.tableCount === 1
-  const validSingleIds = suggestions.filter((suggestion) => suggestion.tableCount === 1).map((suggestion) => suggestion.tableIds[0])
-  const chosenTableIds = selectedSuggestion?.tableIds || selectedTableIds
+  const chosenTableIds = selectedSuggestion?.tableIds || []
   const orderItems = Object.entries(quantities).filter(([, quantity]) => quantity > 0).map(([menuItemId, quantity]) => ({ menuItemId, quantity }))
-
-  function chooseTable(tableId) {
-    if (topIsSingle && validSingleIds.includes(tableId)) setSelectedTableIds([tableId])
-  }
 
   function chooseSuggestion(suggestion) {
     setSelectedSuggestion(suggestion)
-    setSelectedTableIds([])
   }
 
   function updateQuantity(menuItemId, amount) {
     setQuantities((current) => ({ ...current, [menuItemId]: Math.max(0, (current[menuItemId] || 0) + amount) }))
+  }
+
+  async function handleJoinWaitlist() {
+    setIsJoiningWaitlist(true)
+    setWaitlistMessage('')
+    try {
+      const response = await joinWaitlist(id, partySize)
+      setWaitlistMessage(`You joined the waitlist at position ${response.position}.`)
+    } catch (requestError) {
+      setWaitlistMessage(requestError.message || 'Unable to join the waitlist.')
+    } finally {
+      setIsJoiningWaitlist(false)
+    }
   }
 
   async function handleBooking() {
@@ -103,7 +114,7 @@ function BookingTables() {
         <div className={styles.stepHeader}><span>Step 2 of 3</span><strong>Choose your table</strong><div><i /></div></div>
         <p className={styles.eyebrow}>Tables for your visit</p>
         <h1>Choose your table.</h1>
-        <p className={styles.intro}>Available tables are shown in green. Combined tables require a quick host approval.</p>
+        <p className={styles.intro}>Choose one of the ranked table options below. Combined tables require a quick host approval.</p>
         <dl className={styles.summary}>
           <div><dt>Date</dt><dd>{searchParams.get('date')}</dd></div>
           <div><dt>Time</dt><dd>{searchParams.get('time')}</dd></div>
@@ -113,21 +124,19 @@ function BookingTables() {
         {error && <p className={styles.error} role="alert">{error}</p>}
         {!isLoading && !error && (
           <>
-            <FloorPlanGrid tables={tables} elements={elements} selectedTableIds={chosenTableIds} onTableClick={chooseTable} />
-            {topIsSingle ? (
-              <p className={styles.helper}>Select an available table that fits your party.</p>
-            ) : suggestions.length > 0 ? (
+            <FloorPlanGrid tables={tables} elements={elements} availabilityOverride={availability} selectedTableIds={chosenTableIds} highlightedTableIds={hoveredSuggestion?.tableIds || []} />
+            {suggestions.length > 0 ? (
               <section className={styles.suggestions}>
-                <h2>Suggested combinations</h2>
+                <h2>Available table options</h2>
                 {suggestions.map((suggestion, index) => (
-                  <button type="button" key={suggestion.tableIds.join('-')} className={selectedSuggestion === suggestion ? styles.suggestionSelected : styles.suggestion} onClick={() => chooseSuggestion(suggestion)}>
-                    <span><strong>Option {index + 1}</strong><small>{suggestion.tableIds.length} tables &middot; {suggestion.totalCapacity} seats</small></span>
-                    <em>Requires host approval</em>
+                  <button type="button" key={suggestion.tableIds.join('-')} className={selectedSuggestion === suggestion ? styles.suggestionSelected : styles.suggestion} onClick={() => chooseSuggestion(suggestion)} onMouseEnter={() => setHoveredSuggestion(suggestion)} onMouseLeave={() => setHoveredSuggestion(null)}>
+                    <span><strong>Option {index + 1}</strong><small>{suggestion.tableIds.length === 1 ? '1 table' : `${suggestion.tableIds.length} tables`} &middot; {suggestion.totalCapacity} seats</small></span>
+                    <em>{suggestion.tableIds.length > 1 ? 'Requires host approval' : 'Best fit'}</em>
                   </button>
                 ))}
               </section>
             ) : (
-              <div className={styles.empty}><h2>No tables available for this party size/time</h2><p>Try another time or a smaller party size.</p></div>
+              <div className={styles.empty}><h2>No suitable table for this party size at this time</h2><p>Try a different time, adjust your party size, or join the waitlist.</p><div className={styles.emptyActions}><Link to={`/restaurants/${id}/book`}>Try a different time or party size</Link><button type="button" onClick={handleJoinWaitlist} disabled={isJoiningWaitlist}>{isJoiningWaitlist ? 'Joining waitlist...' : 'Join the waitlist'}</button></div>{waitlistMessage && <p role="status">{waitlistMessage}</p>}</div>
             )}
             <section className={styles.preorder}>
               <button type="button" onClick={() => setShowMenu((current) => !current)}>{showMenu ? 'Hide menu' : 'Add items now? (optional)'}</button>

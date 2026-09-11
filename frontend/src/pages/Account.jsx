@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { changePassword as changePasswordRequest } from '../api'
 import NavBar from '../components/NavBar'
 import { useAuth } from '../context/AuthContext'
 import styles from './Account.module.css'
@@ -26,14 +27,20 @@ function Account() {
     console.log('update endpoint not yet available', profile)
   }
 
-  function changePassword(event) {
+  async function changePassword(event) {
     event.preventDefault()
+    setPasswordMessage('')
     if (passwords.next !== passwords.confirm) {
       setPasswordMessage('New passwords do not match.')
       return
     }
-    setPasswordMessage('Password changes are not connected yet. Your account remains unchanged.')
-    console.log('change-password endpoint not yet available')
+    try {
+      await changePasswordRequest(passwords.current, passwords.next)
+      setPasswords({ current: '', next: '', confirm: '' })
+      setPasswordMessage('Password updated successfully.')
+    } catch (requestError) {
+      setPasswordMessage(requestError.message || 'Unable to change your password.')
+    }
   }
 
   function handleLogout() {

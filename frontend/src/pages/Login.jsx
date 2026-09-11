@@ -34,6 +34,10 @@ function Login() {
     try {
       const response = await loginRequest(form)
       const currentUser = await login(response.token)
+      if (response.user?.mustChangePassword || currentUser.mustChangePassword) {
+        navigate('/change-password-required', { replace: true })
+        return
+      }
       const destination = roleRoutes[currentUser.role] || '/discovery'
       const requestedPath = location.state?.from?.pathname
       navigate(requestedPath && requestedPath !== '/login' ? requestedPath : destination, { replace: true })

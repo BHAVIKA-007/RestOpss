@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   createReservation,
   suggestCombination,
+  getTableAvailability,
   confirmReservation,
   approveReservation,
   rejectReservation,
@@ -34,6 +35,8 @@ router.post("/", auth, createReservation);
 router.get("/", auth, isManagerHostOrOwnerOfRestaurant, getRestaurantReservations);
 
 router.get("/suggest-combination", auth, suggestCombination);
+
+router.get("/table-availability", auth, getTableAvailability);
 
 router.patch("/:id/confirm", auth, confirmReservation);
 

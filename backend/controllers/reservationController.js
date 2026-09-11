@@ -5,6 +5,7 @@ const reservationService = require("../services/reservationService");
 const { emitToRestaurant } = require("../services/socketService");
 
 const LOCK_DURATION_MS = 10 * 60 * 1000;
+const RESERVATION_LEAD_TIME_MS = 30 * 60 * 1000;
 const NO_SHOW_GRACE_MINUTES = 15;
 const reservationStatuses = new Set(["locked", "confirmed", "seated", "completed", "cancelled", "no_show"]);
 
@@ -21,6 +22,11 @@ const getDateRange = (date) => {
 exports.createReservation = async (req, res) => {
   try {
     const { restaurantId, tableIds, partySize, timeSlot, durationMinutes } = req.body;
+
+    const requestedTime = new Date(timeSlot);
+    if (Number.isNaN(requestedTime.getTime()) || requestedTime.getTime() < Date.now() + RESERVATION_LEAD_TIME_MS) {
+      return res.status(400).json({ message: "This time has already passed or is less than 30 minutes away" });
+    }
 
     if (!Array.isArray(tableIds) || tableIds.length === 0) {
       return res.status(400).json({ message: "tableIds must be a non-empty array" });
@@ -40,6 +46,10 @@ exports.createReservation = async (req, res) => {
     const combinedCapacity = tables.reduce((s, t) => s + (t.capacity || 0), 0);
     if (!partySize || partySize < 1 || partySize > combinedCapacity) {
       return res.status(400).json({ message: "partySize must be >=1 and not exceed combined table capacity" });
+    }
+
+    if (req.user.role === "customer" && combinedCapacity - Number(partySize) > reservationService.getCustomerOvershootCap(Number(partySize))) {
+      return res.status(400).json({ message: "No suitable table for this party size" });
     }
 
     const dur = durationMinutes || 90;
@@ -120,10 +130,35 @@ exports.suggestCombination = async (req, res) => {
       restaurantId.toString(),
       parsedPartySize,
       requestedTime,
-      requestedDuration
+      requestedDuration,
+      { enforceOvershootCap: req.user.role === "customer" }
     );
 
     return res.json(candidates);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getTableAvailability = async (req, res) => {
+  try {
+    const { restaurantId, timeSlot, durationMinutes } = req.query;
+
+    if (!restaurantId || !mongoose.Types.ObjectId.isValid(restaurantId.toString())) {
+      return res.status(400).json({ message: "A valid restaurantId query parameter is required" });
+    }
+
+    if (!timeSlot || Number.isNaN(new Date(timeSlot).getTime())) {
+      return res.status(400).json({ message: "timeSlot must be a valid date string" });
+    }
+
+    const requestedDuration = durationMinutes === undefined ? 90 : Number(durationMinutes);
+    if (!Number.isFinite(requestedDuration) || requestedDuration <= 0) {
+      return res.status(400).json({ message: "durationMinutes must be a positive number" });
+    }
+
+    const availability = await reservationService.getTableAvailability(restaurantId, new Date(timeSlot), requestedDuration);
+    return res.json(availability);
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }

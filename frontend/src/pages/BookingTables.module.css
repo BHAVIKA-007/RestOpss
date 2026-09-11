@@ -25,6 +25,10 @@
 .empty { margin-top: 1.5rem; padding: 2rem; border-radius: 16px; background: var(--color-white); text-align: center; }
 .empty h2 { font-family: var(--font-display); font-weight: 500; }
 .empty p { color: var(--color-muted); }
+.emptyActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.7rem; margin-top: 1.2rem; }
+.emptyActions a { padding: 0.7rem 0.9rem; border-radius: 10px; color: var(--color-dark); background: var(--color-light-gray); font-size: 0.8rem; font-weight: 800; }
+.emptyActions button { padding: 0.7rem 0.9rem; border: 0; border-radius: 10px; color: var(--color-white); background: var(--color-accent); cursor: pointer; font-size: 0.8rem; font-weight: 800; }
+.emptyActions button:disabled { cursor: wait; opacity: 0.6; }
 .preorder { margin-top: 1.5rem; border-radius: 14px; background: var(--color-white); }
 .preorder > button { width: 100%; padding: 1rem; border: 0; border-radius: inherit; color: var(--color-dark); background: transparent; cursor: pointer; font-weight: 800; text-align: left; }
 .menuPicker { display: grid; gap: 0.8rem; padding: 0 1rem 1rem; }

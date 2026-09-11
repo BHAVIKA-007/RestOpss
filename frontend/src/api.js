@@ -49,3 +49,8 @@ export const registerRequest = (details) => apiRequest('/users/register', {
 })
 
 export const getCurrentUser = () => apiRequest('/users/me')
+
+export const changePassword = (currentPassword, newPassword) => apiRequest('/users/change-password', {
+  method: 'PATCH',
+  body: JSON.stringify({ currentPassword, newPassword }),
+})

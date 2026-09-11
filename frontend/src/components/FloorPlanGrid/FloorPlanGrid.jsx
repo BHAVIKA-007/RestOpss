@@ -1,12 +1,5 @@
 import styles from './FloorPlanGrid.module.css'
 
-const tableStatusClass = {
-  available: styles.available,
-  reserved: styles.unavailable,
-  occupied: styles.unavailable,
-  cleaning: styles.unavailable,
-}
-
 function FloorPlanGrid({
   tables = [],
   elements = [],
@@ -17,8 +10,9 @@ function FloorPlanGrid({
   builderColumns = 12,
   builderRows = 8,
   compact = false,
+  availabilityOverride = null,
   onCellClick = () => {},
-  onTableClick = () => {},
+  onTableClick = null,
   onElementClick = () => {},
 }) {
   const positions = [...tables, ...elements]
@@ -65,16 +59,17 @@ function FloorPlanGrid({
           const isSelected = selectedTableIds.includes(tableId)
           const isHighlighted = highlightedTableIds.includes(tableId)
           const isAdjacent = adjacentTableIds.includes(tableId)
-          const isAvailable = table.status === 'available'
+          const isAvailable = availabilityOverride ? Boolean(availabilityOverride[tableId]) : table.status === 'available'
+          const statusLabel = availabilityOverride ? (isAvailable ? 'available for requested time' : 'unavailable for requested time') : table.status
           return (
             <button
               type="button"
-              className={`${styles.table} ${tableStatusClass[table.status] || styles.unavailable} ${styles[table.shape] || styles.square} ${isSelected || isHighlighted ? styles.selected : ''} ${isAdjacent ? styles.adjacent : ''}`}
+              className={`${styles.table} ${isAvailable ? styles.available : styles.unavailable} ${styles[table.shape] || styles.square} ${isSelected || isHighlighted ? styles.selected : ''} ${isAdjacent ? styles.adjacent : ''}`}
               key={tableId}
               style={{ gridColumn: table.gridX - minX + 1, gridRow: table.gridY - minY + 1 }}
-              disabled={mode === 'view-only' || (mode === 'select-single' && !isAvailable)}
-              onClick={mode === 'view-only' ? undefined : () => (mode === 'builder' || mode === 'host-action' || isAvailable) && onTableClick(tableId)}
-              title={`${table.number ? `Table ${table.number}` : 'Table'}: ${table.status}`}
+              disabled={mode === 'view-only' || (mode === 'select-single' && (!isAvailable || !onTableClick))}
+              onClick={mode === 'view-only' || !onTableClick ? undefined : () => (mode === 'builder' || mode === 'host-action' || isAvailable) && onTableClick(tableId)}
+              title={`${table.number ? `Table ${table.number}` : 'Table'}: ${statusLabel}`}
             >
               <strong>{table.number ?? '?'}</strong>
               <small>{table.capacity} seats</small>

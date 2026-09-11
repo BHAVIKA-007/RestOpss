@@ -48,11 +48,46 @@ exports.loginUser = async (req, res) => {
     return res.json({
       message: "Login successful",
       token,
-      user: { id: user._id, name: user.name, role: user.role }
+      user: { id: user._id, name: user.name, role: user.role, mustChangePassword: user.mustChangePassword }
     });
   } catch (error) {
     console.log(error);
     res.status(500).send("Server Error");
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (typeof currentPassword !== "string" || !currentPassword) {
+      return res.status(400).json({ message: "Current password is required" });
+    }
+
+    if (typeof newPassword !== "string" || !newPassword) {
+      return res.status(400).json({ message: "New password is required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "New password must be at least 6 characters" });
+    }
+
+    const user = await User.findById(req.user._id);
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    user.password = newPassword;
+    user.mustChangePassword = false;
+    await user.save();
+
+    return res.json({ message: "Password changed successfully", mustChangePassword: false });
+  } catch (error) {
+    if (error?.name === "ValidationError") {
+      return res.status(400).json({ message: error.message });
+    }
+    return res.status(500).json({ message: "Unable to change password" });
   }
 };
 

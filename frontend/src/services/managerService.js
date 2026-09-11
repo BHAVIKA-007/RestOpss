@@ -9,6 +9,11 @@ export const saveManagerFloorLayout = (layout) => apiRequest('/floor-layout', {
 
 export const getManagerStaff = () => apiRequest('/staff')
 
+export const assignTableWaiter = (tableId, waiterId) => apiRequest(`/tables/${tableId}/assign-waiter`, {
+  method: 'PATCH',
+  body: JSON.stringify({ waiterId }),
+})
+
 export const createManagerStaff = (staff) => apiRequest('/staff', {
   method: 'POST',
   body: JSON.stringify(staff),

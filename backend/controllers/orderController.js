@@ -1,11 +1,12 @@
 const Order = require("../models/Order");
 const Table = require("../models/Table");
+const Reservation = require("../models/Reservation");
 const { emitToRestaurant } = require("../services/socketService");
 
 // Create Order
 exports.createOrder = async (req, res) => {
   try {
-    const { table, customer, items } = req.body;
+    const { table, items } = req.body;
 
     const tableExists = await Table.findById(table);
     if (!tableExists)
@@ -14,6 +15,15 @@ exports.createOrder = async (req, res) => {
     if (req.user.restaurantId && tableExists.restaurantId.toString() !== req.user.restaurantId.toString()) {
       return res.status(403).json({ message: "Cannot create an order for another restaurant" });
     }
+
+    const seatedReservation = await Reservation.findOne({
+      tables: tableExists._id,
+      restaurantId: tableExists.restaurantId,
+      status: "seated"
+    }).sort({ timeSlot: -1 });
+
+    const linkedCustomer = seatedReservation?.customer || null;
+    const linkedReservation = seatedReservation?._id || null;
 
     // Calculate total
     let total = 0;
@@ -26,7 +36,8 @@ exports.createOrder = async (req, res) => {
 
     const order = await Order.create({
       table,
-      customer,
+      customer: linkedCustomer,
+      reservation: linkedReservation,
       restaurantId: tableExists.restaurantId,
       combinedGroupId: tableExists.combinedGroupId,
       items,

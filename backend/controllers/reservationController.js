@@ -5,6 +5,7 @@ const reservationService = require("../services/reservationService");
 const { emitToRestaurant } = require("../services/socketService");
 
 const LOCK_DURATION_MS = 10 * 60 * 1000;
+const SEATING_BUFFER_MINUTES = 15;
 const RESERVATION_LEAD_TIME_MS = 30 * 60 * 1000;
 const NO_SHOW_GRACE_MINUTES = 15;
 const reservationStatuses = new Set(["locked", "confirmed", "seated", "completed", "cancelled", "no_show"]);
@@ -396,6 +397,11 @@ exports.seatReservation = async (req, res) => {
     if (!ensureSameRestaurant(req, reservation)) return res.status(403).json({ message: "Cannot operate on reservations for another restaurant" });
 
     if (reservation.status !== "confirmed") return res.status(400).json({ message: "Only confirmed reservations can be seated" });
+
+    const earliestSeatingTime = new Date(reservation.timeSlot).getTime() - SEATING_BUFFER_MINUTES * 60 * 1000;
+    if (Date.now() < earliestSeatingTime) {
+      return res.status(400).json({ message: "Too early to seat this reservation - please wait until closer to the reserved time" });
+    }
 
     reservation.status = "seated";
     await reservation.save();

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import StatusBadge from '../components/StatusBadge'
+import PaymentStatusBadge from '../components/PaymentStatusBadge'
 import { useSocket, useSocketEvent } from '../context/SocketContext'
 import { getMenuByRestaurantId } from '../services/restaurantService'
 import { getMyReservations } from '../services/reservationService'
@@ -122,7 +123,7 @@ function PlaceOrder() {
 
 function TrackingView({ order, onReceived, onOrders }) {
   const currentIndex = trackingSteps.indexOf(order.status)
-  return <div className={styles.page}><NavBar /><main className={styles.content}><p className={styles.eyebrow}>Order tracking</p><h1>Your order is on its way.</h1><div className={styles.trackingCard}><div className={styles.trackingHeader}><span>Current status</span><StatusBadge status={order.status} /></div><div className={styles.steps}>{trackingSteps.map((step, index) => <div className={`${styles.step} ${index <= currentIndex ? styles.stepActive : ''}`} key={step}><span>{index + 1}</span><small>{step.replace('_', ' ')}</small></div>)}</div><p className={styles.trackingNote}>We&apos;ll keep this page updated as your restaurant moves through the order.</p>{order.status === 'served' && <button type="button" className={styles.receivedButton} onClick={onReceived}>Confirm received</button>}</div><button type="button" className={styles.ordersLink} onClick={onOrders}>View my orders</button></main></div>
+  return <div className={styles.page}><NavBar /><main className={styles.content}><p className={styles.eyebrow}>Order tracking</p><h1>Your order is on its way.</h1><div className={styles.trackingCard}><div className={styles.trackingHeader}><span>Current status</span><span><StatusBadge status={order.status} /><PaymentStatusBadge paidStatus={order.paidStatus} /></span></div><div className={styles.steps}>{trackingSteps.map((step, index) => <div className={`${styles.step} ${index <= currentIndex ? styles.stepActive : ''}`} key={step}><span>{index + 1}</span><small>{step.replace('_', ' ')}</small></div>)}</div><p className={styles.trackingNote}>We&apos;ll keep this page updated as your restaurant moves through the order.</p>{order.status === 'served' && <button type="button" className={styles.receivedButton} onClick={onReceived}>Confirm received</button>}</div><button type="button" className={styles.ordersLink} onClick={onOrders}>View my orders</button></main></div>
 }
 
 export default PlaceOrder

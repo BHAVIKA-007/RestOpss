@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import FloorPlanGrid from '../components/FloorPlanGrid/FloorPlanGrid'
-import { getManagerFloorLayout, saveManagerFloorLayout } from '../services/managerService'
+import { assignTableWaiter, getManagerFloorLayout, getManagerStaff, saveManagerFloorLayout } from '../services/managerService'
 import styles from './ManagerFloorPlan.module.css'
 import shared from './ManagerPages.module.css'
 
@@ -9,6 +9,7 @@ const objectIdPattern = /^[a-f\d]{24}$/i
 
 function ManagerFloorPlan() {
   const [layout, setLayout] = useState(emptyLayout)
+  const [waiters, setWaiters] = useState([])
   const [activeTool, setActiveTool] = useState(null)
   const [selectedTableId, setSelectedTableId] = useState(null)
   const [selectedElement, setSelectedElement] = useState(null)
@@ -18,10 +19,14 @@ function ManagerFloorPlan() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
+  const [waiterMessage, setWaiterMessage] = useState({ type: '', text: '' })
 
   useEffect(() => {
-    getManagerFloorLayout()
-      .then((data) => setLayout({ tables: data.tables || [], elements: data.elements || [] }))
+    Promise.all([getManagerFloorLayout(), getManagerStaff()])
+      .then(([data, staff]) => {
+        setLayout({ tables: data.tables || [], elements: data.elements || [] })
+        setWaiters((staff || []).filter((member) => member.role === 'waiter'))
+      })
       .catch((error) => setMessage({ type: 'error', text: error.message || 'Unable to load the floor plan.' }))
       .finally(() => setIsLoading(false))
   }, [])
@@ -71,6 +76,18 @@ function ManagerFloorPlan() {
 
   function updateSelectedTable(changes) {
     setLayout((current) => ({ ...current, tables: current.tables.map((table) => (table._id || table.id) === selectedTableId ? { ...table, ...changes } : table) }))
+  }
+
+  async function changeAssignedWaiter(event) {
+    const waiterId = event.target.value || null
+    setWaiterMessage({ type: '', text: '' })
+    try {
+      await assignTableWaiter(selectedTableId, waiterId)
+      updateSelectedTable({ assignedWaiter: waiterId })
+      setWaiterMessage({ type: 'success', text: waiterId ? 'Waiter assigned.' : 'Waiter unassigned.' })
+    } catch (error) {
+      setWaiterMessage({ type: 'error', text: error.message || 'Unable to assign waiter.' })
+    }
   }
 
   function handleElementClick(element) {
@@ -164,6 +181,8 @@ function ManagerFloorPlan() {
                 <label>Capacity <input type="number" min="1" value={selectedTable.capacity} onChange={(event) => updateSelectedTable({ capacity: Math.max(1, Number(event.target.value) || 1) })} /></label>
                 <label>Shape <select value={selectedTable.shape || 'square'} onChange={(event) => updateSelectedTable({ shape: event.target.value })}><option value="square">Square</option><option value="round">Round</option><option value="rect">Rectangle</option></select></label>
                 <label className={styles.checkLabel}><input type="checkbox" checked={Boolean(selectedTable.combinable)} onChange={(event) => updateSelectedTable({ combinable: event.target.checked })} /> Combinable</label>
+                <label>Assigned Waiter <select value={typeof selectedTable.assignedWaiter === 'object' ? selectedTable.assignedWaiter?._id || '' : selectedTable.assignedWaiter || ''} onChange={changeAssignedWaiter}><option value="">Unassigned</option>{waiters.map((waiter) => <option value={waiter._id} key={waiter._id}>{waiter.name}</option>)}</select></label>
+                {waiterMessage.text && <p className={waiterMessage.type === 'error' ? shared.error : styles.success} role="status">{waiterMessage.text}</p>}
                 <button type="button" className={`${styles.secondaryButton} ${adjacencyMode ? styles.active : ''}`} onClick={() => setAdjacencyMode((current) => !current)}>{adjacencyMode ? 'Done linking' : 'Link Adjacent Tables'}</button>
                 {adjacencyMode && <p className={styles.helpText}>Click other tables to toggle them into this table&apos;s adjacency list.</p>}
                 <button type="button" className={styles.deleteButton} onClick={deleteSelected}>Delete from session</button>

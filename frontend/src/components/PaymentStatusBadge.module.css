@@ -1,0 +1,3 @@
+.badge { display: inline-flex; padding: 0.3rem 0.55rem; border-radius: 999px; font-size: 0.68rem; font-weight: 800; }
+.paid { color: #287044; background: #e1f3e7; }
+.unpaid { color: #5b606b; background: #e7e8eb; }

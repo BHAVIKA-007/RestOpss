@@ -9,7 +9,11 @@ exports.getPendingBills = async (req, res) => {
       restaurantId: req.user.restaurantId,
       status: "completed",
       paidStatus: "unpaid"
-    }).populate("table");
+    }).populate("table", "number").populate({
+      path: "reservation",
+      select: "customer",
+      populate: { path: "customer", select: "name" }
+    });
 
     res.json(orders);
   } catch (err) {

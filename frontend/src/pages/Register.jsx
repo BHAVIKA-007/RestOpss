@@ -24,7 +24,7 @@ function Register() {
       await registerRequest(form)
       const response = await loginRequest({ email: form.email, password: form.password })
       await login(response.token)
-      navigate('/discovery', { replace: true })
+      navigate('/customer', { replace: true })
     } catch (requestError) {
       setError(requestError.message || 'Unable to create your account. Please try again.')
     } finally {

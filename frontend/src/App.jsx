@@ -41,6 +41,7 @@ import WaiterLayout from './components/WaiterLayout'
 import CashierBilling from './pages/CashierBilling'
 import ChefKitchen from './pages/ChefKitchen'
 import ChangePasswordRequired from './pages/ChangePasswordRequired'
+import CustomerHome from './pages/CustomerHome'
 
 function App() {
   return (
@@ -57,6 +58,9 @@ function App() {
           <Route path="/restaurants/:id" element={<RestaurantDetail />} />
           <Route path="/restaurants/:id/menu" element={<MenuView />} />
           <Route element={<ProtectedRoute />}>
+            <Route path="/customer" element={<ProtectedRoute role="customer" />}>
+              <Route index element={<CustomerHome />} />
+            </Route>
             <Route path="/change-password-required" element={<ChangePasswordRequired />} />
             <Route path="/account" element={<Account />} />
             <Route path="/restaurants/:id/book" element={<Booking />} />
@@ -84,7 +88,7 @@ function App() {
                 <Route path="/manager/reports" element={<ManagerReports />} />
               </Route>
             </Route>
-            <Route element={<ProtectedRoute role="host" />}>
+            <Route element={<ProtectedRoute roles={['host', 'manager']} />}>
               <Route element={<HostLayout />}>
                 <Route path="/host" element={<HostFloor />} />
                 <Route path="/host/floor" element={<HostFloor />} />

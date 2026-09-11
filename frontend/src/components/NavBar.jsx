@@ -13,12 +13,14 @@ function NavBar() {
 
   return (
     <header className={styles.navbar}>
-      <Link to="/" className={styles.logo} aria-label="RestOps home">
+      <Link to={user?.role === 'customer' ? '/customer' : '/'} className={styles.logo} aria-label="RestOps home">
         Rest<span>Ops</span>
       </Link>
       <nav className={styles.actions} aria-label="Account navigation">
         <span className={styles.greeting}>{user?.name || 'Welcome'}</span>
         {user?.role === 'customer' && <Link to="/restaurants" className={styles.accountLink}>Restaurants</Link>}
+        {user?.role === 'customer' && <Link to="/reservations/mine" className={styles.accountLink}>My Reservations</Link>}
+        {user?.role === 'customer' && <Link to="/orders/mine" className={styles.accountLink}>My Orders</Link>}
         {user?.role === 'customer' && <Link to="/owner/restaurants/new" className={styles.ownerLink}>Own a restaurant?</Link>}
         <Link to="/account" className={styles.accountLink}>Account</Link>
         <button type="button" className={styles.logoutButton} onClick={handleLogout}>Log out</button>

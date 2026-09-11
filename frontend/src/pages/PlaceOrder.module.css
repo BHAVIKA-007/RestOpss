@@ -4,6 +4,12 @@
 .empty { margin-top: 2rem; padding: 2rem; border-radius: 16px; background: var(--color-white); text-align: center; }
 .empty h2 { margin: 0 0 0.6rem; font-family: var(--font-display); font-weight: 500; }
 .empty p { margin: 0; color: var(--color-muted); }
+.orderPanelButton { margin: 1.2rem 0 0; padding: 0.8rem 1rem; border: 0; border-radius: 999px; color: var(--color-white); background: var(--color-dark); cursor: pointer; font-weight: 800; }
+.orderPanel { display: grid; gap: 0.8rem; margin-top: 1rem; padding: 1rem; border-radius: 16px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.orderPanel h2 { margin: 0; font-family: var(--font-display); font-size: 1.6rem; font-weight: 500; }
+.orderPanel .trackingCard { margin-top: 0; box-shadow: none; }
+.receivedMessage { margin: 0.8rem 0 0; color: #287044; font-weight: 800; }
+.receivedError { margin: 0.8rem 0 0; color: #a6292c; font-size: 0.8rem; }
 .page { min-height: 100svh; background: var(--color-light-gray); }
 .content, .center { width: min(100% - 2rem, 820px); margin: 0 auto; padding: 2rem 0 7rem; }
 .center { padding-top: 8rem; text-align: center; }

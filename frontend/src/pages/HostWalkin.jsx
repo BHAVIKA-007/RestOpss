@@ -28,7 +28,10 @@ function HostWalkin() {
     try {
       const proposed = await suggestCombination({ restaurantId: user.restaurantId, partySize: groupSize, timeSlot })
       setSuggestion(proposed)
-    } catch { setSuggestion(null) }
+    } catch (requestError) {
+      setSuggestion(null)
+      setError(requestError.message || 'Unable to load a table suggestion.')
+    }
     try {
       const allocation = await allocateWalkIn({ restaurantId: user.restaurantId, groupSize: Number(groupSize), ...(guestName.trim() ? { guestName: guestName.trim() } : {}), ...(guestPhone.trim() ? { guestPhone: guestPhone.trim() } : {}) })
       const assignedTable = tables.find((table) => String(table._id) === String(allocation.tableId))

@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import styles from './Account.module.css'
 
 const roleRoutes = {
-  customer: '/discovery',
+  customer: '/customer',
   owner: '/owner',
   manager: '/manager',
   waiter: '/waiter',

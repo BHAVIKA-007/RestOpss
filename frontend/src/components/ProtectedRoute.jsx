@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-function ProtectedRoute({ role }) {
+function ProtectedRoute({ role, roles }) {
   const { user, isLoading } = useAuth()
   const location = useLocation()
 
@@ -17,7 +17,8 @@ function ProtectedRoute({ role }) {
     return <Navigate to="/change-password-required" replace />
   }
 
-  if (role && user.role !== role) {
+  const allowedRoles = roles || (role ? [role] : null)
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to={`/${user.role}`} replace />
   }
 

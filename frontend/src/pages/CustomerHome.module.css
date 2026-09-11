@@ -1,0 +1,14 @@
+.page { min-height: 100svh; background: var(--color-light-gray); }
+.content { width: min(100% - 2rem, 900px); margin: 0 auto; padding: 3rem 0 5rem; }
+.eyebrow, .label { color: var(--color-accent); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.content h1 { margin: 0.7rem 0 2rem; font-family: var(--font-display); font-size: clamp(2.8rem, 8vw, 5rem); font-weight: 500; line-height: 0.98; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.card, .empty { padding: 1.5rem; border-radius: 16px; background: var(--color-white); box-shadow: var(--shadow-card); }
+.card h2, .empty h2 { margin: 0.7rem 0; font-family: var(--font-display); font-size: 1.6rem; font-weight: 500; }
+.card p, .empty p { color: var(--color-muted); }
+.card a, .empty a, .quickLinks a { color: var(--color-accent); font-weight: 800; }
+.empty { margin-top: 1rem; text-align: center; }
+.error { padding: 0.8rem 1rem; border-radius: 10px; color: #a6292c; background: #fff0f0; }
+.quickLinks { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 2rem; }
+.quickLinks a { padding: 0.8rem 1rem; border-radius: 10px; background: var(--color-white); text-decoration: none; }
+@media (max-width: 620px) { .grid { grid-template-columns: 1fr; } }

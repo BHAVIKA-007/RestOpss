@@ -14,13 +14,18 @@ const {
 
 const { auth, isManager, isWaiter, isManagerOrHost } = require("../middleware/auth");
 
+const allowAllocationStaff = (req, res, next) => {
+  if (["waiter", "manager", "host"].includes(req.user?.role)) return next();
+  return res.status(403).json({ message: "Only a waiter, manager, or host can allocate tables" });
+};
+
 // Allocate → waiter + manager
-router.post("/allocate", auth, isWaiter, allocateTable);
+router.post("/allocate", auth, allowAllocationStaff, allocateTable);
 
 router.post("/waiting/join", auth, joinWaitlist);
 
 // Free → waiter + manager
-router.post("/free", auth, isWaiter, freeTable);
+router.post("/free", auth, allowAllocationStaff, freeTable);
 
 // Waiting queue → manager or host
 router.get("/waiting", auth, isManagerOrHost, getWaitingQueue);

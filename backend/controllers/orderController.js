@@ -104,14 +104,15 @@ exports.updateStatus = async (req, res) => {
     if (nextStatuses[order.status] !== status) {
       return res.status(400).json({ message: `Cannot transition order from ${order.status} to ${status}` });
     }
-    order.status = status;
+    order.status = status === "served" ? "completed" : status;
     await order.save();
 
     const events = { accepted: "order:accepted", picked_up: "order:pickedUp", served: "order:delivered" };
     if (events[status]) {
       emitToRestaurant(order.restaurantId.toString(), events[status], {
         orderId: order._id.toString(),
-        restaurantId: order.restaurantId.toString()
+        restaurantId: order.restaurantId.toString(),
+        status: order.status
       });
     }
 

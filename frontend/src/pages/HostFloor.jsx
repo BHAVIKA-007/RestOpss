@@ -21,7 +21,7 @@ function HostFloor() {
 
   const load = useCallback(async () => {
     try {
-      const [layout, confirmed] = await Promise.all([getHostFloorLayout(), getHostReservations({ status: ['confirmed'] })])
+      const [layout, confirmed] = await Promise.all([getHostFloorLayout(), getHostReservations({ status: ['confirmed', 'seated'] })])
       setFloor(layout)
       setReservations(confirmed)
       setError('')
@@ -33,6 +33,8 @@ function HostFloor() {
 
   const selectedTable = floor.tables.find((table) => getId(table) === selectedTableId)
   const matchingReservations = reservations.filter((reservation) => reservation.tables?.some((table) => getId(table) === selectedTableId))
+  const confirmedReservations = matchingReservations.filter((reservation) => reservation.status === 'confirmed')
+  const seatedReservations = matchingReservations.filter((reservation) => reservation.status === 'seated')
 
   async function changeStatus(status) {
     setWorking(true); setError('')
@@ -50,7 +52,7 @@ function HostFloor() {
     try { await seatReservation(id); setSelectedTableId(''); await load() } catch (requestError) { setError(requestError.message || 'Unable to seat this reservation.') } finally { setWorking(false) }
   }
 
-  return <div><header className={styles.heading}><div><p className={styles.eyebrow}>Host station</p><h1>Live floor.</h1><p>Keep the room moving with small, timely decisions.</p></div><Link to="/host/walkin" className={styles.primaryButton}>Seat walk-in</Link></header>{error && <p className={styles.error} role="alert">{error}</p>}{isLoading ? <p className={styles.status}>Loading the live floor...</p> : <section className={styles.panel + ' ' + styles.floorPanel}><FloorPlanGrid mode="host-action" tables={floor.tables} elements={floor.elements} selectedTableIds={selectedTableId ? [selectedTableId] : []} onTableClick={setSelectedTableId} />{selectedTable && <div className={styles.actionMenu}><span className={styles.label}>Table {selectedTable.number}</span><h2>{selectedTable.status}</h2><p>Choose the next front-of-house action.</p><div className={styles.actionRow}>{selectedTable.status === 'cleaning' ? <button type="button" className={styles.actionButton} disabled={working} onClick={() => changeStatus('available')}>Mark as Available</button> : <button type="button" className={styles.actionButton} disabled={working} onClick={() => changeStatus('cleaning')}>Mark as Cleaning</button>}<Link to="/host/walkin" state={{ tableId: selectedTableId }} className={styles.secondaryButton}>Seat a Walk-in Here</Link></div>{matchingReservations.length > 0 && <div className={styles.reservationPicker}><span className={styles.label}>Confirmed reservations</span>{matchingReservations.map((reservation) => <button type="button" key={reservation._id} disabled={working} onClick={() => seat(reservation._id)}>Seat {reservation.customer?.name || 'guest'} &middot; party of {reservation.partySize}</button>)}</div>}</div>}</section>}</div>
+  return <div><header className={styles.heading}><div><p className={styles.eyebrow}>Host station</p><h1>Live floor.</h1><p>Keep the room moving with small, timely decisions.</p></div><Link to="/host/walkin" className={styles.primaryButton}>Seat walk-in</Link></header>{error && <p className={styles.error} role="alert">{error}</p>}{isLoading ? <p className={styles.status}>Loading the live floor...</p> : <section className={styles.panel + ' ' + styles.floorPanel}><FloorPlanGrid mode="host-action" tables={floor.tables} elements={floor.elements} selectedTableIds={selectedTableId ? [selectedTableId] : []} onTableClick={setSelectedTableId} />{selectedTable && <div className={styles.actionMenu}><span className={styles.label}>Table {selectedTable.number}</span><h2>{selectedTable.status}</h2>{(confirmedReservations.length > 0 || seatedReservations.length > 0) && <div className={styles.reservationPicker}><span className={styles.label}>{seatedReservations.length > 0 ? 'Current reservation' : 'Reservation details'}</span>{[...seatedReservations, ...confirmedReservations].map((reservation) => <div key={reservation._id}><strong>{reservation.customer?.name || 'Walk-in guest'}</strong><p>Party of {reservation.partySize} &middot; {new Date(reservation.timeSlot).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</p>{reservation.status === 'confirmed' && <button type="button" disabled={working} onClick={() => seat(reservation._id)}>Seat This Reservation</button>}</div>)}</div>}<p>Choose the next front-of-house action.</p><div className={styles.actionRow}>{selectedTable.status === 'cleaning' ? <button type="button" className={styles.actionButton} disabled={working} onClick={() => changeStatus('available')}>Mark as Available</button> : <button type="button" className={styles.actionButton} disabled={working} onClick={() => changeStatus('cleaning')}>Mark as Cleaning</button>}<Link to="/host/walkin" state={{ tableId: selectedTableId }} className={styles.secondaryButton}>Seat a Walk-in Here</Link></div></div>}</section>}</div>
 }
 
 export default HostFloor

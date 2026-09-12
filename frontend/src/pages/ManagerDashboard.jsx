@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import FloorPlanGrid from '../components/FloorPlanGrid/FloorPlanGrid'
 import { useAuth } from '../context/AuthContext'
 import { useSocket, useSocketEvent } from '../context/SocketContext'
+import { getRestaurantById, updateRestaurantSettings } from '../services/restaurantService'
 import {
   getManagerFloorLayout,
   getManagerKitchenQueue,
@@ -19,6 +20,9 @@ function ManagerDashboard() {
   const [snapshot, setSnapshot] = useState(emptySnapshot)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [seatingDuration, setSeatingDuration] = useState(60)
+  const [isSavingSettings, setIsSavingSettings] = useState(false)
+  const [settingsMessage, setSettingsMessage] = useState('')
 
   const loadSnapshot = useCallback(async () => {
     try {
@@ -45,7 +49,23 @@ function ManagerDashboard() {
   useEffect(() => {
     if (user?.restaurantId) joinRestaurantRoom(user.restaurantId)
     loadSnapshot()
+    if (user?.restaurantId) getRestaurantById(user.restaurantId).then((restaurant) => setSeatingDuration(restaurant.defaultSeatingDurationMinutes || 60)).catch(() => {})
   }, [joinRestaurantRoom, loadSnapshot, user?.restaurantId])
+
+  async function saveSettings(event) {
+    event.preventDefault()
+    setIsSavingSettings(true)
+    setSettingsMessage('')
+    try {
+      const response = await updateRestaurantSettings(user.restaurantId, { defaultSeatingDurationMinutes: Number(seatingDuration) })
+      setSeatingDuration(response.restaurant.defaultSeatingDurationMinutes)
+      setSettingsMessage('Saved.')
+    } catch (requestError) {
+      setSettingsMessage(requestError.message || 'Unable to save seating time.')
+    } finally {
+      setIsSavingSettings(false)
+    }
+  }
 
   const handleLiveUpdate = useCallback(() => { loadSnapshot() }, [loadSnapshot])
   useSocketEvent('table:statusChanged', handleLiveUpdate)
@@ -70,6 +90,13 @@ function ManagerDashboard() {
           <div className={styles.statCard}><span className={styles.statLabel}>Kitchen queue</span><strong>{snapshot.kitchen}</strong><span>Current open orders</span></div>
         </div>
       </div>
+      <section className={styles.panel}>
+        <div className={styles.panelHeading}><div><span className={styles.panelKicker}>Reservation settings</span><h2>Average seating time</h2></div></div>
+        <form className={styles.formGrid} onSubmit={saveSettings}>
+          <label>Minutes per seating<input type="number" min="15" max="240" step="1" value={seatingDuration} onChange={(event) => setSeatingDuration(event.target.value)} /></label>
+          <div><button type="submit" className={styles.primaryButton} disabled={isSavingSettings || !user?.restaurantId}>{isSavingSettings ? 'Saving...' : 'Save seating time'}</button>{settingsMessage && <p className={styles.status} role="status">{settingsMessage}</p>}</div>
+        </form>
+      </section>
     </div>
   )
 }

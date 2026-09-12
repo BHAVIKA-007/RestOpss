@@ -98,7 +98,7 @@ function BookingTables() {
     setIsSubmitting(true)
     setError('')
     try {
-      const response = await createReservation({ restaurantId: id, tableIds: chosenTableIds, partySize, timeSlot, durationMinutes: 90 })
+      const response = await createReservation({ restaurantId: id, tableIds: chosenTableIds, partySize, timeSlot })
       navigate(`/reservations/${response._id}/confirm`, { state: { preOrder: orderItems } })
     } catch (requestError) {
       setError(requestError.message || 'Unable to hold that table. Please try again.')

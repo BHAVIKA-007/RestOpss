@@ -4,13 +4,13 @@ export function getFloorLayout(restaurantId) {
   return apiRequest(`/floor-layout?restaurantId=${encodeURIComponent(restaurantId)}`)
 }
 
-export function suggestCombination({ restaurantId, partySize, timeSlot, durationMinutes = 90 }) {
-  const params = new URLSearchParams({ restaurantId, partySize: String(partySize), timeSlot, durationMinutes: String(durationMinutes) })
+export function suggestCombination({ restaurantId, partySize, timeSlot }) {
+  const params = new URLSearchParams({ restaurantId, partySize: String(partySize), timeSlot })
   return apiRequest(`/reservations/suggest-combination?${params}`)
 }
 
-export function getTableAvailability({ restaurantId, timeSlot, durationMinutes = 90 }) {
-  const params = new URLSearchParams({ restaurantId, timeSlot, durationMinutes: String(durationMinutes) })
+export function getTableAvailability({ restaurantId, timeSlot }) {
+  const params = new URLSearchParams({ restaurantId, timeSlot })
   return apiRequest(`/reservations/table-availability?${params}`)
 }
 

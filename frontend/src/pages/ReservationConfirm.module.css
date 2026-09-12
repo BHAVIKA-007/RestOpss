@@ -22,4 +22,5 @@ dd { max-width: 70%; margin: 0; font-weight: 800; text-align: right; overflow-wr
 .notice a, .center a { color: var(--color-accent); font-weight: 800; }
 .error { padding: 1rem; border-radius: 12px; color: #a6292c; background: #fff0f0; }
 .preOrderNote { color: var(--color-muted); font-size: 0.8rem; }
+.graceNote { margin: 1rem 0 0; color: var(--color-muted); font-size: 0.78rem; line-height: 1.5; }
 @media (max-width: 560px) { .confirmBox { align-items: stretch; flex-direction: column; } .confirmButton { width: 100%; } }

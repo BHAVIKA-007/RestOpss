@@ -17,3 +17,10 @@ export function getRestaurantById(id) {
 export function getMenuByRestaurantId(id) {
   return apiRequest(`/menu/${id}`)
 }
+
+export function updateRestaurantSettings(id, settings) {
+  return apiRequest(`/restaurants/${id}/settings`, {
+    method: 'PATCH',
+    body: JSON.stringify(settings),
+  })
+}

@@ -6,6 +6,7 @@ const links = [
   { label: 'Floor View', to: '/host/floor' },
   { label: 'Waitlist', to: '/host/waitlist' },
   { label: 'Approvals', to: '/host/approvals' },
+  { label: 'Reservations', to: '/host/reservations' },
 ]
 
 function HostLayout() {

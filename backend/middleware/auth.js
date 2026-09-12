@@ -64,6 +64,7 @@ exports.isManagerOrOwnerOfRestaurant = async (req, res, next) => {
       if (req.baseUrl.includes("table")) Model = Table;
       if (req.baseUrl.includes("staff")) Model = UserModel;
       if (req.baseUrl.includes("reservation")) Model = Reservation;
+      if (req.baseUrl.includes("restaurant")) Model = Restaurant;
       const resource = await Model.findById(req.params.id).select("restaurantId");
       if (resource) restaurantId = resource.restaurantId;
     }

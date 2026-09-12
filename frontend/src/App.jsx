@@ -95,6 +95,7 @@ function App() {
                 <Route path="/host/walkin" element={<HostWalkin />} />
                 <Route path="/host/waitlist" element={<HostWaitlist />} />
                 <Route path="/host/approvals" element={<ManagerApprovals />} />
+                <Route path="/host/reservations" element={<ManagerReservations />} />
               </Route>
             </Route>
             <Route element={<ProtectedRoute role="waiter" />}>

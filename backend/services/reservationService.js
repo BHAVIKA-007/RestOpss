@@ -115,7 +115,7 @@ const buildCombinationCandidates = ({ tables, combinableTables = tables, partySi
  */
 exports.checkTableOverlap = async (tableIds, timeSlot, durationMinutes, excludeReservationId) => {
   const requestedStart = new Date(timeSlot);
-  const requestedEnd = new Date(requestedStart.getTime() + (durationMinutes || 90) * 60000);
+  const requestedEnd = new Date(requestedStart.getTime() + (durationMinutes || 60) * 60000);
 
   const query = {
     tables: { $in: tableIds },
@@ -128,7 +128,7 @@ exports.checkTableOverlap = async (tableIds, timeSlot, durationMinutes, excludeR
 
   for (const r of existing) {
     const existingStart = new Date(r.timeSlot);
-    const existingEnd = new Date(existingStart.getTime() + (r.durationMinutes || 90) * 60000);
+    const existingEnd = new Date(existingStart.getTime() + (r.durationMinutes || 60) * 60000);
 
     if (existingStart < requestedEnd && requestedStart < existingEnd) {
       return true;
@@ -144,7 +144,7 @@ exports.findTableCombinations = async (restaurantId, partySize, timeSlot, durati
   const parsedPartySize = Number(partySize);
   if (!Number.isInteger(parsedPartySize) || parsedPartySize < 1) return [];
 
-  const requestedDuration = Number(durationMinutes || 90);
+  const requestedDuration = Number(durationMinutes || 60);
   if (!Number.isFinite(requestedDuration) || requestedDuration <= 0) return [];
 
   const allTables = await Table.find({ restaurantId }).lean();

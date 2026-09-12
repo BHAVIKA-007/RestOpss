@@ -15,3 +15,4 @@ dd { margin: 0; font-weight: 800; text-align: right; }
 .orders h2 { margin-bottom: 1rem; }
 .order { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.8rem 0; border-top: 1px solid var(--color-light-gray); font-size: 0.82rem; }
 .orderButton { display: flex; justify-content: space-between; width: min(100%, 340px); padding: 1rem 1.2rem; border: 0; border-radius: 12px; color: var(--color-white); background: var(--color-accent); cursor: pointer; font-weight: 800; }
+.graceNote { margin: -0.4rem 0 1.2rem; color: var(--color-muted); font-size: 0.78rem; line-height: 1.5; }

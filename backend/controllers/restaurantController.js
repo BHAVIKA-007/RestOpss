@@ -42,7 +42,7 @@ exports.getPublicRestaurants = async (req, res) => {
       filter.name = { $regex: escapeRegex(search), $options: "i" };
     }
 
-    const restaurants = await Restaurant.find(filter).select("_id name address phone cuisine");
+    const restaurants = await Restaurant.find(filter).select("_id name address phone cuisine defaultSeatingDurationMinutes");
     res.json(restaurants);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -51,7 +51,7 @@ exports.getPublicRestaurants = async (req, res) => {
 
 exports.getPublicRestaurant = async (req, res) => {
   try {
-    const restaurant = await Restaurant.findById(req.params.id).select("_id name address phone cuisine");
+    const restaurant = await Restaurant.findById(req.params.id).select("_id name address phone cuisine defaultSeatingDurationMinutes");
 
     if (!restaurant) {
       return res.status(404).json({ message: "Restaurant not found" });
@@ -63,6 +63,26 @@ exports.getPublicRestaurant = async (req, res) => {
       return res.status(404).json({ message: "Restaurant not found" });
     }
 
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.updateSettings = async (req, res) => {
+  const { defaultSeatingDurationMinutes } = req.body;
+
+  if (typeof defaultSeatingDurationMinutes !== "number" || !Number.isInteger(defaultSeatingDurationMinutes) || defaultSeatingDurationMinutes < 15 || defaultSeatingDurationMinutes > 240) {
+    return res.status(400).json({ message: "defaultSeatingDurationMinutes must be a whole number between 15 and 240 minutes" });
+  }
+
+  try {
+    const restaurant = await Restaurant.findByIdAndUpdate(
+      req.params.id,
+      { defaultSeatingDurationMinutes },
+      { new: true, runValidators: true }
+    );
+    if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
+    res.json({ message: "Restaurant settings updated", restaurant });
+  } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };

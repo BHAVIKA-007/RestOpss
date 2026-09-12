@@ -83,6 +83,7 @@ function ReservationConfirm() {
           <div className={styles.cardTop}><span>Reservation details</span><StatusBadge status={reservation.status} label={getCustomerFacingStatusLabel(reservation.status, reservation.timeSlot, reservation.lockExpiresAt)} /></div>
           <dl><div><dt>When</dt><dd>{formatDateTime(reservation.timeSlot)}</dd></div><div><dt>Party</dt><dd>{reservation.partySize} guests</dd></div><div><dt>Tables</dt><dd>{reservation.tables.map((table) => getId(table)).join(', ')}</dd></div></dl>
         </section>
+        <p className={styles.graceNote}>Please arrive within 15 minutes of your reservation time - tables may be released to other guests after that.</p>
         {expired ? (
           <section className={styles.notice}><h2>This booking has expired</h2><p>The table hold timed out. Start again to find a fresh option.</p><Link to={`/restaurants/${getId(reservation.restaurantId)}`}>Back to restaurant</Link></section>
         ) : requiresApproval ? (

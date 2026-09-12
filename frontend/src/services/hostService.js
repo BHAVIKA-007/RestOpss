@@ -9,8 +9,9 @@ export const getHostReservations = (filters = {}) => {
   return apiRequest(`/reservations${query ? `?${query}` : ''}`)
 }
 export const seatReservation = (id) => apiRequest(`/reservations/${id}/seat`, { method: 'PATCH' })
-export const suggestCombination = ({ restaurantId, partySize, timeSlot, durationMinutes = 90 }) => {
-  const params = new URLSearchParams({ restaurantId, partySize: String(partySize), timeSlot, durationMinutes: String(durationMinutes) })
+export const markNoShowReservation = (id) => apiRequest(`/reservations/${id}/no-show`, { method: 'PATCH' })
+export const suggestCombination = ({ restaurantId, partySize, timeSlot }) => {
+  const params = new URLSearchParams({ restaurantId, partySize: String(partySize), timeSlot })
   return apiRequest(`/reservations/suggest-combination?${params}`)
 }
 export const allocateWalkIn = (details) => apiRequest('/allocation/allocate', { method: 'POST', body: JSON.stringify(details) })

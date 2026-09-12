@@ -47,9 +47,11 @@ function MyReservations() {
   }
 
   const isExpiredLocked = (item) => item.status === 'locked' && [item.timeSlot, item.lockExpiresAt].some((value) => value && new Date(value).getTime() < Date.now())
-  const upcoming = reservations.filter((item) => upcomingStatuses.includes(item.status) && !isExpiredLocked(item))
-  const past = reservations.filter((item) => pastStatuses.includes(item.status))
-  const cancelled = reservations.filter((item) => item.status === 'cancelled')
+  const bySoonest = (a, b) => new Date(a.timeSlot) - new Date(b.timeSlot)
+  const byMostRecent = (a, b) => new Date(b.timeSlot) - new Date(a.timeSlot)
+  const upcoming = reservations.filter((item) => upcomingStatuses.includes(item.status) && !isExpiredLocked(item)).sort(bySoonest)
+  const past = reservations.filter((item) => pastStatuses.includes(item.status)).sort(byMostRecent)
+  const cancelled = reservations.filter((item) => item.status === 'cancelled').sort(byMostRecent)
   const expired = reservations.filter(isExpiredLocked)
 
   return <div className={styles.page}><NavBar /><main className={styles.content}><p className={styles.eyebrow}>Your plans</p><h1>My reservations</h1>{isLoading && <p className={styles.empty}>Loading reservations...</p>}{error && <p className={styles.error} role="alert">{error}</p>}{!isLoading && !error && <>{section('Upcoming', upcoming)}{section('Past', past)}{section('Expired / Incomplete', expired)}{section('Cancelled', cancelled)}</>}</main></div>

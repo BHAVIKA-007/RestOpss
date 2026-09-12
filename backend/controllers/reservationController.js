@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Reservation = require("../models/Reservation");
 const Table = require("../models/Table");
+const Restaurant = require("../models/Restaurant");
 const reservationService = require("../services/reservationService");
 const { emitToRestaurant } = require("../services/socketService");
 
@@ -22,7 +23,10 @@ const getDateRange = (date) => {
 
 exports.createReservation = async (req, res) => {
   try {
-    const { restaurantId, tableIds, partySize, timeSlot, durationMinutes } = req.body;
+    const { restaurantId, tableIds, partySize, timeSlot } = req.body;
+
+    const restaurant = await Restaurant.findById(restaurantId).select("defaultSeatingDurationMinutes");
+    if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
 
     const requestedTime = new Date(timeSlot);
     if (Number.isNaN(requestedTime.getTime()) || requestedTime.getTime() < Date.now() + RESERVATION_LEAD_TIME_MS) {
@@ -53,7 +57,7 @@ exports.createReservation = async (req, res) => {
       return res.status(400).json({ message: "No suitable table for this party size" });
     }
 
-    const dur = durationMinutes || 90;
+    const dur = restaurant.defaultSeatingDurationMinutes;
     const overlap = await reservationService.checkTableOverlap(tableIds, timeSlot, dur);
     if (overlap) return res.status(409).json({ message: "One or more selected tables are already reserved for that time" });
 
@@ -98,7 +102,7 @@ exports.createReservation = async (req, res) => {
 
 exports.suggestCombination = async (req, res) => {
   try {
-    const { restaurantId, partySize, timeSlot, durationMinutes } = req.query;
+    const { restaurantId, partySize, timeSlot } = req.query;
 
     if (!restaurantId || !restaurantId.toString().trim()) {
       return res.status(400).json({ message: "restaurantId query parameter is required" });
@@ -122,10 +126,9 @@ exports.suggestCombination = async (req, res) => {
       return res.status(400).json({ message: "timeSlot must be a valid date string" });
     }
 
-    const requestedDuration = durationMinutes === undefined ? 90 : Number(durationMinutes);
-    if (!Number.isFinite(requestedDuration) || requestedDuration <= 0) {
-      return res.status(400).json({ message: "durationMinutes must be a positive number" });
-    }
+    const restaurant = await Restaurant.findById(restaurantId).select("defaultSeatingDurationMinutes");
+    if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
+    const requestedDuration = restaurant.defaultSeatingDurationMinutes;
 
     const candidates = await reservationService.findTableCombinations(
       restaurantId.toString(),
@@ -143,7 +146,7 @@ exports.suggestCombination = async (req, res) => {
 
 exports.getTableAvailability = async (req, res) => {
   try {
-    const { restaurantId, timeSlot, durationMinutes } = req.query;
+    const { restaurantId, timeSlot } = req.query;
 
     if (!restaurantId || !mongoose.Types.ObjectId.isValid(restaurantId.toString())) {
       return res.status(400).json({ message: "A valid restaurantId query parameter is required" });
@@ -153,10 +156,9 @@ exports.getTableAvailability = async (req, res) => {
       return res.status(400).json({ message: "timeSlot must be a valid date string" });
     }
 
-    const requestedDuration = durationMinutes === undefined ? 90 : Number(durationMinutes);
-    if (!Number.isFinite(requestedDuration) || requestedDuration <= 0) {
-      return res.status(400).json({ message: "durationMinutes must be a positive number" });
-    }
+    const restaurant = await Restaurant.findById(restaurantId).select("defaultSeatingDurationMinutes");
+    if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
+    const requestedDuration = restaurant.defaultSeatingDurationMinutes;
 
     const availability = await reservationService.getTableAvailability(restaurantId, new Date(timeSlot), requestedDuration);
     return res.json(availability);
@@ -184,15 +186,19 @@ exports.confirmReservation = async (req, res) => {
       return res.status(410).json({ message: "Reservation lock expired; please create a new reservation" });
     }
 
-    const overlap = await reservationService.checkTableOverlap(reservation.tables, reservation.timeSlot, reservation.durationMinutes, reservation._id);
+    const restaurant = await Restaurant.findById(reservation.restaurantId).select("defaultSeatingDurationMinutes");
+    if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
+    const durationMinutes = restaurant.defaultSeatingDurationMinutes;
+    const overlap = await reservationService.checkTableOverlap(reservation.tables, reservation.timeSlot, durationMinutes, reservation._id);
     if (overlap) return res.status(409).json({ message: "One or more selected tables are already reserved for that time" });
 
+    reservation.durationMinutes = durationMinutes;
     reservation.status = "confirmed";
     reservation.lockExpiresAt = null;
     reservation.lockedTableSlots = Reservation.getLockedTableSlots({
       tables: reservation.tables,
       timeSlot: reservation.timeSlot,
-      durationMinutes: reservation.durationMinutes
+      durationMinutes
     });
 
     try {
@@ -234,9 +240,13 @@ exports.approveReservation = async (req, res) => {
       return res.status(403).json({ message: "Cannot operate on reservations for another restaurant" });
     }
 
-    const overlap = await reservationService.checkTableOverlap(reservation.tables, reservation.timeSlot, reservation.durationMinutes, reservation._id);
+    const restaurant = await Restaurant.findById(reservation.restaurantId).select("defaultSeatingDurationMinutes");
+    if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
+    const durationMinutes = restaurant.defaultSeatingDurationMinutes;
+    const overlap = await reservationService.checkTableOverlap(reservation.tables, reservation.timeSlot, durationMinutes, reservation._id);
     if (overlap) return res.status(409).json({ message: "One or more selected tables are already reserved for that time" });
 
+    reservation.durationMinutes = durationMinutes;
     reservation.requiresApproval = false;
     reservation.lockExpiresAt = new Date(Date.now() + LOCK_DURATION_MS);
     await reservation.save();

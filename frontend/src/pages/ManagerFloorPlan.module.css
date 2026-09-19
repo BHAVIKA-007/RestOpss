@@ -19,6 +19,8 @@
 .editPanel h2 { margin: 0; font-family: var(--font-display); font-size: 1.6rem; font-weight: 500; }
 .checkLabel { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 0.5rem !important; }
 .checkLabel input { min-width: auto; }
+.adjacencyField { display: grid; gap: 0.35rem; margin: 0; padding: 0.65rem; border: 1px solid #d8d8d8; border-radius: 8px; }
+.adjacencyField legend { padding: 0 0.25rem; color: var(--color-muted); font-size: 0.68rem; font-weight: 800; }
 .secondaryButton { text-align: left; }
 .deleteButton { color: #a6292c; background: #fff0f0; }
 @media (max-width: 860px) { .builderLayout { grid-template-columns: 1fr; } .editPanel { grid-template-columns: repeat(2, minmax(0, 1fr)); } .editPanel .groupLabel, .editPanel h2, .editPanel .helpText { grid-column: 1 / -1; } }

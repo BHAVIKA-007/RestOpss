@@ -18,3 +18,4 @@ export const allocateWalkIn = (details) => apiRequest('/allocation/allocate', { 
 export const getHostWaitlist = () => apiRequest('/allocation/waiting/position')
 export const respondToWaitlist = (id, accept, tableId) => apiRequest(`/allocation/waiting/${id}/respond`, { method: 'PATCH', body: JSON.stringify({ accept, ...(tableId ? { tableId } : {}) }) })
 export const expireHostWaitlist = (id) => apiRequest(`/allocation/waiting/${id}/expire-check`, { method: 'PATCH' })
+export const resolveHostWaitlist = (id) => apiRequest(`/allocation/waiting/${id}/resolve`, { method: 'PATCH' })

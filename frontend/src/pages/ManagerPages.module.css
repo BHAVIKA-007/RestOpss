@@ -37,6 +37,7 @@
 .dataTable th { padding: 0.7rem; color: var(--color-muted); font-size: 0.65rem; letter-spacing: 0.08em; text-align: left; text-transform: uppercase; }
 .dataTable td { padding: 0.9rem 0.7rem; border-top: 1px solid var(--color-light-gray); vertical-align: middle; }
 .dataTable td small { display: block; max-width: 280px; margin-top: 0.3rem; color: var(--color-muted); font-size: 0.72rem; }
+.reviewRow { background: #fffaf0; }
 .dataTable td:last-child, .dataTable th:last-child { text-align: right; }
 .rowActions { display: flex; justify-content: end; gap: 0.4rem; }
 .menuGroups { display: grid; gap: 1rem; }

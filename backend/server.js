@@ -40,6 +40,10 @@ app.get("/", (req, res) => {
   res.send("Restaurant Management API Running...");
 });
 
+app.get("/api/load-test", (req, res) => {
+    res.status(200).json({ ok: true });
+});
+
 initSocket(server);
 
 const PORT = process.env.PORT || 5000;

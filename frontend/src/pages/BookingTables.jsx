@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import FloorPlanGrid from '../components/FloorPlanGrid/FloorPlanGrid'
 import { useSocket, useSocketEvent } from '../context/SocketContext'
-import { getMenuByRestaurantId } from '../services/restaurantService'
+import { getMenuByRestaurantId, getRestaurantById } from '../services/restaurantService'
 import { createReservation, getFloorLayout, getTableAvailability, joinWaitlist, suggestCombination } from '../services/reservationService'
 import styles from './BookingTables.module.css'
 
@@ -22,6 +22,8 @@ function BookingTables() {
   const [tables, setTables] = useState([])
   const [elements, setElements] = useState([])
   const [suggestions, setSuggestions] = useState([])
+  const [exceedsMaxCapacity, setExceedsMaxCapacity] = useState(false)
+  const [restaurantPhone, setRestaurantPhone] = useState('')
   const [menu, setMenu] = useState([])
   const [quantities, setQuantities] = useState({})
   const [showMenu, setShowMenu] = useState(false)
@@ -33,6 +35,7 @@ function BookingTables() {
   const [waitlistMessage, setWaitlistMessage] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const autoJoinedReviewKey = useRef('')
 
   const handleTableStatus = useCallback((event) => {
     setTables((current) => current.map((table) => table._id === event.tableId ? { ...table, status: event.status } : table))
@@ -53,12 +56,26 @@ function BookingTables() {
       getFloorLayout(id),
       suggestCombination({ restaurantId: id, partySize, timeSlot }),
       getTableAvailability({ restaurantId: id, timeSlot }),
+      getRestaurantById(id),
     ])
-      .then(([layout, rankedSuggestions, requestedAvailability]) => {
+      .then(async ([layout, rankedSuggestions, requestedAvailability, restaurant]) => {
         setTables(layout.tables || [])
         setElements(layout.elements || [])
-        setSuggestions(rankedSuggestions || [])
+        setSuggestions(rankedSuggestions.suggestions || [])
+        setExceedsMaxCapacity(Boolean(rankedSuggestions.exceedsMaxCapacity))
+        setRestaurantPhone(restaurant.phone || '')
         setAvailability(Object.fromEntries((requestedAvailability || []).map((item) => [item.tableId, item.availableAtRequestedTime])))
+
+        const reviewKey = `${id}:${partySize}`
+        if (rankedSuggestions.exceedsMaxCapacity && autoJoinedReviewKey.current !== reviewKey) {
+          autoJoinedReviewKey.current = reviewKey
+          try {
+            const response = await joinWaitlist(id, partySize)
+            setWaitlistMessage(response.message || 'Your request was sent to the restaurant for manager review.')
+          } catch (requestError) {
+            setWaitlistMessage(requestError.message || 'Unable to send your request for manager review.')
+          }
+        }
       })
       .catch((requestError) => setError(requestError.message || 'Unable to load table availability.'))
       .finally(() => setIsLoading(false))
@@ -76,6 +93,13 @@ function BookingTables() {
     setSelectedSuggestion(suggestion)
   }
 
+  function getSuggestionTableLabels(suggestion) {
+    return suggestion.tableIds.map((tableId) => {
+      const table = tables.find((item) => (item._id || item.id) === tableId)
+      return table?.number ? `Table ${table.number}` : tableId
+    }).join(' + ')
+  }
+
   function updateQuantity(menuItemId, amount) {
     setQuantities((current) => ({ ...current, [menuItemId]: Math.max(0, (current[menuItemId] || 0) + amount) }))
   }
@@ -85,7 +109,9 @@ function BookingTables() {
     setWaitlistMessage('')
     try {
       const response = await joinWaitlist(id, partySize)
-      setWaitlistMessage(`You joined the waitlist at position ${response.position}.`)
+      setWaitlistMessage(response.needsManagerReview
+        ? 'This party size needs manager attention because it exceeds the restaurant\'s current seating capacity.'
+        : `You joined the waitlist at position ${response.position}.`)
     } catch (requestError) {
       setWaitlistMessage(requestError.message || 'Unable to join the waitlist.')
     } finally {
@@ -130,13 +156,13 @@ function BookingTables() {
                 <h2>Available table options</h2>
                 {suggestions.map((suggestion, index) => (
                   <button type="button" key={suggestion.tableIds.join('-')} className={selectedSuggestion === suggestion ? styles.suggestionSelected : styles.suggestion} onClick={() => chooseSuggestion(suggestion)} onMouseEnter={() => setHoveredSuggestion(suggestion)} onMouseLeave={() => setHoveredSuggestion(null)}>
-                    <span><strong>Option {index + 1}</strong><small>{suggestion.tableIds.length === 1 ? '1 table' : `${suggestion.tableIds.length} tables`} &middot; {suggestion.totalCapacity} seats</small></span>
+                    <span><strong>Option {index + 1}</strong><small>{getSuggestionTableLabels(suggestion)}</small><small>{suggestion.totalCapacity} seats total</small></span>
                     <em>{suggestion.tableIds.length > 1 ? 'Requires host approval' : 'Best fit'}</em>
                   </button>
                 ))}
               </section>
             ) : (
-              <div className={styles.empty}><h2>No suitable table for this party size at this time</h2><p>Try a different time, adjust your party size, or join the waitlist.</p><div className={styles.emptyActions}><Link to={`/restaurants/${id}/book`}>Try a different time or party size</Link><button type="button" onClick={handleJoinWaitlist} disabled={isJoiningWaitlist}>{isJoiningWaitlist ? 'Joining waitlist...' : 'Join the waitlist'}</button></div>{waitlistMessage && <p role="status">{waitlistMessage}</p>}</div>
+              <div className={styles.empty}><h2>{exceedsMaxCapacity ? "This restaurant can't accommodate a party this large" : 'No suitable table for this party size at this time'}</h2><p>{exceedsMaxCapacity ? `Please contact the restaurant directly${restaurantPhone ? ` at ${restaurantPhone}` : ''}. Your request has been sent to the restaurant for manager review.` : 'Try a different time, adjust your party size, or join the waitlist.'}</p><div className={styles.emptyActions}><Link to={`/restaurants/${id}/book`}>Try a different time or party size</Link>{!exceedsMaxCapacity && <button type="button" onClick={handleJoinWaitlist} disabled={isJoiningWaitlist}>{isJoiningWaitlist ? 'Joining waitlist...' : 'Join the waitlist'}</button>}</div>{waitlistMessage && <p role="status">{waitlistMessage}</p>}</div>
             )}
             <section className={styles.preorder}>
               <button type="button" onClick={() => setShowMenu((current) => !current)}>{showMenu ? 'Hide menu' : 'Add items now? (optional)'}</button>

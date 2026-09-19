@@ -138,7 +138,10 @@ exports.suggestCombination = async (req, res) => {
       { enforceOvershootCap: req.user.role === "customer" }
     );
 
-    return res.json(candidates);
+    const exceedsMaxCapacity = candidates.length === 0
+      && parsedPartySize > await reservationService.getTheoreticalMaxSeatablePartySize(restaurantId.toString());
+
+    return res.json({ suggestions: candidates, exceedsMaxCapacity });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }

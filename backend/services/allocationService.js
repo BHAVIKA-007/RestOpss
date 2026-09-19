@@ -1,5 +1,6 @@
 const Table = require("../models/Table");
 const WaitingQueue = require("../models/WaitingQueue");
+const reservationService = require("./reservationService");
 const { emitToRestaurant } = require("./socketService");
 
 const WAITLIST_RESPONSE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
@@ -37,25 +38,45 @@ exports.allocateTableService = async (groupSize, restaurantId, customerId = null
     };
   }
 
-  // If no table fits → check if bigger table even exists
-  const biggestTable = await Table.findOne({ restaurantId }).sort({ capacity: -1 });
-
-  // Means this group is too large for system tables
-  if (biggestTable && biggestTable.capacity < groupSize) {
-    return {
-      status: "manager_required",
-      message: "Group too large. Manager override needed."
-    };
-  }
-
   // Else → add to waiting queue
-  const entry = await WaitingQueue.create({ 
+    if (customerId) {
+      const existingEntry = await WaitingQueue.findOne({
+        restaurantId,
+        customer: customerId,
+        status: { $in: ["waiting", "notified"] }
+      });
+      if (existingEntry) {
+        return {
+          status: "already_waiting",
+          message: "You're already on the waitlist for this restaurant",
+          queueId: existingEntry._id
+        };
+      }
+    }
+
+  const maximumSeatablePartySize = await reservationService.getTheoreticalMaxSeatablePartySize(restaurantId);
+  const needsManagerReview = groupSize > maximumSeatablePartySize;
+  const entry = await WaitingQueue.create({
     restaurantId,
     groupSize,
     customer: customerId || null,
     guestName: guestName || null,
-    guestPhone: guestPhone || null
+    guestPhone: guestPhone || null,
+    needsManagerReview
   });
+
+  if (needsManagerReview) {
+    emitToRestaurant(restaurantId.toString(), "waitlist:managerReviewNeeded", {
+      waitingQueueId: entry._id.toString(),
+      restaurantId: restaurantId.toString(),
+      groupSize: entry.groupSize
+    });
+    return {
+      status: "manager_review",
+      needsManagerReview: true,
+      queueId: entry._id
+    };
+  }
 
   const position = await WaitingQueue.countDocuments({
     restaurantId,
@@ -94,7 +115,8 @@ exports.freeTableService = async (tableId, restaurantId) => {
   // Skip incompatible entries (too large for this table), don't stop
   const waitingList = await WaitingQueue.find({
     restaurantId,
-    status: "waiting"
+    status: "waiting",
+    needsManagerReview: { $ne: true }
   }).sort({ createdAt: 1 });
 
   for (let group of waitingList) {
@@ -152,7 +174,8 @@ exports.allocateFromWaitlistForTable = async (tableId, restaurantId) => {
 
   const waitingList = await WaitingQueue.find({
     restaurantId,
-    status: "waiting"
+    status: "waiting",
+    needsManagerReview: { $ne: true }
   }).sort({ createdAt: 1 });
 
   for (let group of waitingList) {
@@ -217,10 +240,17 @@ exports.viewWaitingQueueWithPosition = async (restaurantId) => {
   const now = new Date();
 
   // Compute 1-indexed position based on 'waiting' status entries only
-  const waitingEntries = entries.filter(e => e.status === "waiting");
+  const waitingEntries = entries.filter(e => e.status === "waiting" && !e.needsManagerReview);
+
+  entries.sort((a, b) => {
+    if (Boolean(a.needsManagerReview) !== Boolean(b.needsManagerReview)) {
+      return a.needsManagerReview ? 1 : -1;
+    }
+    return a.createdAt - b.createdAt;
+  });
 
   return entries.map(entry => {
-    const position = entry.status === "waiting"
+    const position = entry.status === "waiting" && !entry.needsManagerReview
       ? waitingEntries.findIndex(e => e._id.equals(entry._id)) + 1
       : null;
 

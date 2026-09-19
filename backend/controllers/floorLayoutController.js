@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Table = require("../models/Table");
 const FloorElement = require("../models/FloorElement");
+const { syncTableAdjacency } = require("../services/tableAdjacencyService");
 
 const isValidGridCoordinate = (value) => Number.isInteger(value) && value >= 0;
 
@@ -38,6 +39,9 @@ const validateTableEntry = (entry, restaurantId) => {
   }
 
   if (Array.isArray(entry.adjacentTo)) {
+    if (entry._id && entry.adjacentTo.some((adjacentId) => adjacentId.toString() === entry._id.toString())) {
+      return "a table cannot be adjacent to itself";
+    }
     const invalidAdjacent = entry.adjacentTo.find((adjacentId) => !mongoose.Types.ObjectId.isValid(adjacentId));
     if (invalidAdjacent) {
       return "adjacentTo contains an invalid table id";
@@ -136,6 +140,7 @@ exports.saveFloorLayout = async (req, res) => {
             },
             { new: true, runValidators: true, session }
           );
+          await syncTableAdjacency({ table: updatedTable, previousAdjacentTo: existingTable.adjacentTo, nextAdjacentTo: entry.adjacentTo || [], restaurantId, session });
           createdOrUpdatedTables.push(updatedTable);
         } else {
           const createdTable = await Table.create([
@@ -145,6 +150,9 @@ exports.saveFloorLayout = async (req, res) => {
             }
           ], { session });
           createdOrUpdatedTables.push(createdTable[0]);
+          await syncTableAdjacency({ table: createdTable[0], nextAdjacentTo: entry.adjacentTo || [], restaurantId, session });
+          createdTable[0].adjacentTo = entry.adjacentTo || [];
+          await createdTable[0].save({ session });
         }
       }
 

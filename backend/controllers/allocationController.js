@@ -11,6 +11,7 @@ const WaitingQueue = require("../models/WaitingQueue");
 const Table = require("../models/Table");
 const Restaurant = require("../models/Restaurant");
 const { emitToRestaurant } = require("../services/socketService");
+const reservationService = require("../services/reservationService");
 
 const WAITLIST_RESPONSE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -56,7 +57,37 @@ exports.joinWaitlist = async (req, res) => {
       return res.status(400).json({ message: "restaurantId and a positive groupSize are required" });
     }
 
-    const entry = await WaitingQueue.create({ restaurantId, groupSize: parsedGroupSize, customer: req.user._id });
+    const existingEntry = await WaitingQueue.findOne({
+      restaurantId,
+      customer: req.user._id,
+      status: { $in: ["waiting", "notified"] }
+    }).sort({ createdAt: -1 });
+
+    if (existingEntry) {
+      return res.status(400).json({
+        message: "You're already on the waitlist for this restaurant",
+        queueId: existingEntry._id
+      });
+    }
+
+    const maximumSeatablePartySize = await reservationService.getTheoreticalMaxSeatablePartySize(restaurantId);
+    const needsManagerReview = parsedGroupSize > maximumSeatablePartySize;
+    const entry = await WaitingQueue.create({
+      restaurantId,
+      groupSize: parsedGroupSize,
+      customer: req.user._id,
+      needsManagerReview
+    });
+
+    if (needsManagerReview) {
+      emitToRestaurant(restaurantId.toString(), "waitlist:managerReviewNeeded", {
+        waitingQueueId: entry._id.toString(),
+        restaurantId: restaurantId.toString(),
+        groupSize: entry.groupSize
+      });
+      return res.status(201).json({ status: "manager_review", needsManagerReview: true, queueId: entry._id });
+    }
+
     const position = await WaitingQueue.countDocuments({
       restaurantId,
       status: "waiting",
@@ -97,6 +128,27 @@ exports.getWaitingQueueWithPosition = async (req, res) => {
     res.json(queue);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+exports.resolveWaitlistEntry = async (req, res) => {
+  try {
+    const entry = await WaitingQueue.findById(req.params.id);
+    if (!entry) return res.status(404).json({ error: "Waitlist entry not found" });
+    if (!req.user.restaurantId || !entry.restaurantId.equals(req.user.restaurantId)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    if (!["manager", "host"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Only a manager or host can resolve a waitlist entry" });
+    }
+    if (entry.status === "cancelled") return res.status(400).json({ error: "Waitlist entry is already cancelled" });
+
+    entry.status = "cancelled";
+    await entry.save();
+    emitToRestaurant(entry.restaurantId.toString(), "waitlist:resolved", { waitingQueueId: entry._id.toString() });
+    return res.json({ success: true, message: "Waitlist entry marked resolved", entry });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 };
 

@@ -2,6 +2,18 @@ import { apiRequest } from '../api'
 
 export const getManagerFloorLayout = () => apiRequest('/floor-layout')
 
+export const createManagerTable = (table) => apiRequest('/tables', {
+  method: 'POST',
+  body: JSON.stringify(table),
+})
+
+export const updateManagerTable = (id, changes) => apiRequest(`/tables/${id}`, {
+  method: 'PATCH',
+  body: JSON.stringify(changes),
+})
+
+export const deleteManagerTable = (id) => apiRequest(`/tables/${id}`, { method: 'DELETE' })
+
 export const saveManagerFloorLayout = (layout) => apiRequest('/floor-layout', {
   method: 'POST',
   body: JSON.stringify(layout),
@@ -51,5 +63,6 @@ export const getManagerWaitlist = () => apiRequest('/allocation/waiting')
 export const expireManagerWaitlistEntry = (id) => apiRequest(`/allocation/waiting/${id}/expire-check`, {
   method: 'PATCH',
 })
+export const resolveManagerWaitlistEntry = (id) => apiRequest(`/allocation/waiting/${id}/resolve`, { method: 'PATCH' })
 
 export const getManagerKitchenQueue = () => apiRequest('/kitchen')

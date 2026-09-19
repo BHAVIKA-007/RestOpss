@@ -174,6 +174,47 @@ exports.findTableCombinations = async (restaurantId, partySize, timeSlot, durati
 
 exports.getCustomerOvershootCap = CUSTOMER_OVERSHOOT_CAP;
 
+exports.getTheoreticalMaxSeatablePartySize = async (restaurantId) => {
+  const tables = await Table.find({ restaurantId }).lean();
+  if (!tables.length) return 0;
+
+  const tableMap = new Map(tables.map((table) => [normalizeTableId(table._id), table]));
+  const combinableIds = new Set(tables.filter((table) => table.combinable === true).map((table) => normalizeTableId(table._id)));
+  const adjacency = new Map([...combinableIds].map((tableId) => [tableId, new Set()]));
+
+  for (const table of tables) {
+    const tableId = normalizeTableId(table._id);
+    if (!combinableIds.has(tableId)) continue;
+
+    for (const adjacentId of (table.adjacentTo || []).map(normalizeTableId)) {
+      if (combinableIds.has(adjacentId) && adjacentId !== tableId) {
+        adjacency.get(tableId).add(adjacentId);
+        adjacency.get(adjacentId).add(tableId);
+      }
+    }
+  }
+
+  let maximum = Math.max(...tables.map((table) => Number(table.capacity || 0)));
+  const visited = new Set();
+
+  for (const startId of combinableIds) {
+    if (visited.has(startId)) continue;
+
+    const stack = [startId];
+    let componentCapacity = 0;
+    while (stack.length) {
+      const tableId = stack.pop();
+      if (visited.has(tableId)) continue;
+      visited.add(tableId);
+      componentCapacity += Number(tableMap.get(tableId)?.capacity || 0);
+      stack.push(...(adjacency.get(tableId) || []));
+    }
+    maximum = Math.max(maximum, componentCapacity);
+  }
+
+  return maximum;
+};
+
 exports.getTableAvailability = async (restaurantId, timeSlot, durationMinutes) => {
   const tables = await Table.find({ restaurantId }).select("_id").lean();
   return Promise.all(tables.map(async (table) => ({
@@ -187,5 +228,6 @@ module.exports = {
   findTableCombinations: exports.findTableCombinations,
   buildCombinationCandidates,
   getCustomerOvershootCap: exports.getCustomerOvershootCap,
+  getTheoreticalMaxSeatablePartySize: exports.getTheoreticalMaxSeatablePartySize,
   getTableAvailability: exports.getTableAvailability
 };

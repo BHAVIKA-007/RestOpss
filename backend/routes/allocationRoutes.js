@@ -7,6 +7,7 @@ const {
   freeTable,
   getWaitingQueue,
   getWaitingQueueWithPosition,
+  resolveWaitlistEntry,
   respondToWaitlistNotification,
   expireWaitlistEntry,
   managerOverride
@@ -32,6 +33,8 @@ router.get("/waiting", auth, isManagerOrHost, getWaitingQueue);
 
 // Waiting queue with position and wait time computed → manager or host
 router.get("/waiting/position", auth, isManagerOrHost, getWaitingQueueWithPosition);
+
+router.patch("/waiting/:id/resolve", auth, isManagerOrHost, resolveWaitlistEntry);
 
 // Respond to waitlist notification: accept or decline (customer or host/manager)
 router.patch("/waiting/:id/respond", auth, respondToWaitlistNotification);

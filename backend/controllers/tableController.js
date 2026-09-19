@@ -1,5 +1,6 @@
 const Table = require("../models/Table");
 const User = require("../models/User");
+const { syncTableAdjacency, removeTableFromAdjacency } = require("../services/tableAdjacencyService");
 
 const handleDuplicateTableError = (res, err) => {
   if (err?.code === 11000) {
@@ -14,10 +15,14 @@ const isValidGridCoordinate = (value) => Number.isInteger(value) && value >= 0;
 // CREATE table
 exports.createTable = async (req, res) => {
   try {
-    const { number, capacity, gridX, gridY, shape, combinable } = req.body;
+    const { number, capacity, gridX, gridY, shape, combinable, adjacentTo = [] } = req.body;
 
     if (!req.restaurantId) {
       return res.status(400).json({ message: "You must own a restaurant first" });
+    }
+
+    if (!Array.isArray(adjacentTo)) {
+      return res.status(400).json({ message: "adjacentTo must be an array of table IDs" });
     }
 
     if (gridX === undefined || gridY === undefined) {
@@ -39,11 +44,19 @@ exports.createTable = async (req, res) => {
       gridY,
       shape,
       combinable,
+      adjacentTo: [],
       restaurantId: req.restaurantId
     });
 
+    await syncTableAdjacency({ table, restaurantId: req.restaurantId, nextAdjacentTo: adjacentTo });
+    table.adjacentTo = adjacentTo;
+    await table.save();
+
     res.status(201).json({ message: "Table created", table });
   } catch (err) {
+    if (err?.message?.includes("adjacentTo") || err?.message?.includes("cannot be adjacent")) {
+      return res.status(400).json({ message: err.message });
+    }
     if (err?.name === "ValidationError") {
       return res.status(400).json({ message: err.message });
     }
@@ -147,13 +160,17 @@ exports.updateHostTableStatus = async (req, res) => {
 exports.updateTable = async (req, res) => {
   try {
     const updateData = {};
-    const fields = ["number", "capacity", "status", "currentOrder", "gridX", "gridY", "shape", "combinable"];
+    const fields = ["number", "capacity", "status", "currentOrder", "gridX", "gridY", "shape", "combinable", "adjacentTo"];
 
     fields.forEach((field) => {
       if (Object.prototype.hasOwnProperty.call(req.body, field)) {
         updateData[field] = req.body[field];
       }
     });
+
+    if (Object.prototype.hasOwnProperty.call(updateData, "adjacentTo") && !Array.isArray(updateData.adjacentTo)) {
+      return res.status(400).json({ message: "adjacentTo must be an array of table IDs" });
+    }
 
     if (Object.prototype.hasOwnProperty.call(updateData, "gridX") || Object.prototype.hasOwnProperty.call(updateData, "gridY")) {
       const gridX = updateData.gridX;
@@ -164,16 +181,21 @@ exports.updateTable = async (req, res) => {
       }
     }
 
-    const table = await Table.findOneAndUpdate(
-      { _id: req.params.id, restaurantId: req.restaurantId },
-      updateData,
-      { new: true, runValidators: true }
-    );
-
+    const table = await Table.findOne({ _id: req.params.id, restaurantId: req.restaurantId });
     if (!table) return res.status(404).json({ message: "Table not found" });
+
+    const previousAdjacentTo = table.adjacentTo || [];
+    Object.assign(table, updateData);
+    if (Object.prototype.hasOwnProperty.call(updateData, "adjacentTo")) {
+      await syncTableAdjacency({ table, previousAdjacentTo, nextAdjacentTo: updateData.adjacentTo || [], restaurantId: req.restaurantId });
+    }
+    await table.save();
 
     res.json({ message: "Table updated", table });
   } catch (err) {
+    if (err?.message?.includes("adjacentTo") || err?.message?.includes("cannot be adjacent")) {
+      return res.status(400).json({ message: err.message });
+    }
     if (err?.name === "ValidationError") {
       return res.status(400).json({ message: err.message });
     }
@@ -189,6 +211,7 @@ exports.deleteTable = async (req, res) => {
     const table = await Table.findOneAndDelete({ _id: req.params.id, restaurantId: req.restaurantId });
     if (!table) return res.status(404).json({ message: "Table not found" });
 
+    await removeTableFromAdjacency({ tableId: table._id, restaurantId: req.restaurantId });
     res.json({ message: "Table deleted" });
   } catch (err) {
     res.status(500).json({ message: err.message });

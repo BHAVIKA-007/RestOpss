@@ -2,17 +2,8 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { loginRequest } from '../api'
 import { useAuth } from '../context/AuthContext'
+import { getRoleRoute, isPathAllowedForRole } from '../utils/roleRoutes'
 import styles from './Login.module.css'
-
-const roleRoutes = {
-  customer: '/customer',
-  owner: '/owner',
-  manager: '/manager',
-  waiter: '/waiter',
-  chef: '/chef',
-  cashier: '/cashier',
-  host: '/host',
-}
 
 function Login() {
   const { login } = useAuth()
@@ -38,9 +29,12 @@ function Login() {
         navigate('/change-password-required', { replace: true })
         return
       }
-      const destination = roleRoutes[currentUser.role] || '/discovery'
+      const destination = getRoleRoute(currentUser.role)
       const requestedPath = location.state?.from?.pathname
-      navigate(requestedPath && requestedPath !== '/login' ? requestedPath : destination, { replace: true })
+      const safeRequestedPath = requestedPath && requestedPath !== '/login' && isPathAllowedForRole(requestedPath, currentUser.role)
+        ? requestedPath
+        : destination
+      navigate(safeRequestedPath, { replace: true })
     } catch (requestError) {
       setError(requestError.message || 'Unable to log in. Please try again.')
     } finally {

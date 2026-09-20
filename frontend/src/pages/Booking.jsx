@@ -6,7 +6,6 @@ import styles from './Booking.module.css'
 
 const RESERVATION_LEAD_TIME_MINUTES = 30
 const DEFAULT_PARTY_SIZE_UPPER_BOUND = 30
-const PARTY_SIZE_HEADROOM = 15
 
 const formatLocalDate = (value = new Date()) => {
   const year = value.getFullYear()
@@ -51,7 +50,7 @@ function Booking() {
       .then(({ maxCapacity }) => {
         const computedMaxCapacity = Number(maxCapacity)
         if (Number.isFinite(computedMaxCapacity) && computedMaxCapacity > 0) {
-          setPartySizeUpperBound(computedMaxCapacity + PARTY_SIZE_HEADROOM)
+          setPartySizeUpperBound(Math.ceil(computedMaxCapacity * 1.1))
         } else {
           setPartySizeUpperBound(DEFAULT_PARTY_SIZE_UPPER_BOUND)
         }

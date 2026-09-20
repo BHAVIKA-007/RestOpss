@@ -88,7 +88,7 @@ function App() {
                 <Route path="/manager/reports" element={<ManagerReports />} />
               </Route>
             </Route>
-            <Route element={<ProtectedRoute roles={['host', 'manager']} />}>
+            <Route element={<ProtectedRoute role="host" />}>
               <Route element={<HostLayout />}>
                 <Route path="/host" element={<HostFloor />} />
                 <Route path="/host/floor" element={<HostFloor />} />

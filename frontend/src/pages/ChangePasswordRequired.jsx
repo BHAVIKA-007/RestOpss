@@ -2,17 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { changePassword } from '../api'
 import { useAuth } from '../context/AuthContext'
+import { getRoleRoute } from '../utils/roleRoutes'
 import styles from './Account.module.css'
-
-const roleRoutes = {
-  customer: '/customer',
-  owner: '/owner',
-  manager: '/manager',
-  waiter: '/waiter',
-  chef: '/chef',
-  cashier: '/cashier',
-  host: '/host',
-}
 
 function ChangePasswordRequired() {
   const { refreshUser } = useAuth()
@@ -37,7 +28,7 @@ function ChangePasswordRequired() {
     try {
       await changePassword(passwords.current, passwords.next)
       const updatedUser = await refreshUser()
-      navigate(roleRoutes[updatedUser.role] || '/discovery', { replace: true })
+      navigate(getRoleRoute(updatedUser.role), { replace: true })
     } catch (requestError) {
       setMessage(requestError.message || 'Unable to change your password.')
     } finally {

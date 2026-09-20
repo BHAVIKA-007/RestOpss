@@ -1,5 +1,6 @@
 const Order = require("../models/Order");
 const Table = require("../models/Table");
+const Reservation = require("../models/Reservation");
 const { emitToRestaurant } = require("../services/socketService");
 
 // Get unpaid completed orders
@@ -42,10 +43,30 @@ exports.markPaid = async (req, res) => {
     order.paidAt = new Date();
     await order.save();
 
-    // Free table just in case
-    const tables = order.combinedGroupId
-      ? await Table.find({ combinedGroupId: order.combinedGroupId })
-      : await Table.find({ _id: order.table });
+    let tables = [];
+    if (order.reservation) {
+      const unpaidOrderCount = await Order.countDocuments({
+        reservation: order.reservation,
+        paidStatus: "unpaid"
+      });
+
+      if (unpaidOrderCount === 0) {
+        const reservation = await Reservation.findById(order.reservation);
+        if (reservation?.status === "seated") {
+          reservation.status = "completed";
+          reservation.lockExpiresAt = null;
+          reservation.lockedTableSlots = [];
+          await reservation.save();
+          tables = await Table.find({ _id: { $in: reservation.tables } });
+        }
+      }
+    } else {
+      // Preserve legacy walk-in billing behavior.
+      tables = order.combinedGroupId
+        ? await Table.find({ combinedGroupId: order.combinedGroupId })
+        : await Table.find({ _id: order.table });
+    }
+
     for (const table of tables) {
       table.status = "available";
       table.currentOrder = null;

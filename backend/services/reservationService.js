@@ -1,5 +1,6 @@
 const Reservation = require("../models/Reservation");
 const Table = require("../models/Table");
+const Restaurant = require("../models/Restaurant");
 
 const CUSTOMER_OVERSHOOT_CAP = (partySize) => Math.max(2, Math.ceil(partySize / 2));
 
@@ -174,7 +175,7 @@ exports.findTableCombinations = async (restaurantId, partySize, timeSlot, durati
 
 exports.getCustomerOvershootCap = CUSTOMER_OVERSHOOT_CAP;
 
-exports.getTheoreticalMaxSeatablePartySize = async (restaurantId) => {
+const getComputedTheoreticalMaxSeatablePartySize = async (restaurantId) => {
   const tables = await Table.find({ restaurantId }).lean();
   if (!tables.length) return 0;
 
@@ -215,6 +216,18 @@ exports.getTheoreticalMaxSeatablePartySize = async (restaurantId) => {
   return maximum;
 };
 
+exports.getRestaurantMaxCapacity = async (restaurantId) => {
+  const [restaurant, computedCapacity] = await Promise.all([
+    Restaurant.findById(restaurantId).select("maxPartySizeOverride").lean(),
+    getComputedTheoreticalMaxSeatablePartySize(restaurantId)
+  ]);
+
+  if (!restaurant) return null;
+
+  const override = restaurant.maxPartySizeOverride;
+  return Number.isFinite(override) ? Math.max(override, computedCapacity) : computedCapacity;
+};
+
 exports.getTableAvailability = async (restaurantId, timeSlot, durationMinutes) => {
   const tables = await Table.find({ restaurantId }).select("_id").lean();
   return Promise.all(tables.map(async (table) => ({
@@ -228,6 +241,6 @@ module.exports = {
   findTableCombinations: exports.findTableCombinations,
   buildCombinationCandidates,
   getCustomerOvershootCap: exports.getCustomerOvershootCap,
-  getTheoreticalMaxSeatablePartySize: exports.getTheoreticalMaxSeatablePartySize,
+  getRestaurantMaxCapacity: exports.getRestaurantMaxCapacity,
   getTableAvailability: exports.getTableAvailability
 };

@@ -54,7 +54,7 @@ exports.allocateTableService = async (groupSize, restaurantId, customerId = null
       }
     }
 
-  const maximumSeatablePartySize = await reservationService.getTheoreticalMaxSeatablePartySize(restaurantId);
+  const maximumSeatablePartySize = await reservationService.getRestaurantMaxCapacity(restaurantId);
   const needsManagerReview = groupSize > maximumSeatablePartySize;
   const entry = await WaitingQueue.create({
     restaurantId,

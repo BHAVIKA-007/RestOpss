@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import FloorPlanGrid from '../components/FloorPlanGrid/FloorPlanGrid'
 import { useAuth } from '../context/AuthContext'
 import { useSocket, useSocketEvent } from '../context/SocketContext'
-import { getRestaurantById, updateRestaurantSettings } from '../services/restaurantService'
+import { getRestaurantById, getRestaurantMaxCapacity, updateRestaurantSettings } from '../services/restaurantService'
 import {
   getManagerFloorLayout,
   getManagerKitchenQueue,
@@ -21,6 +21,9 @@ function ManagerDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [seatingDuration, setSeatingDuration] = useState(60)
+  const [maxCapacity, setMaxCapacity] = useState(0)
+  const [maxPartySizeOverride, setMaxPartySizeOverride] = useState('')
+  const [useMaxPartySizeOverride, setUseMaxPartySizeOverride] = useState(false)
   const [isSavingSettings, setIsSavingSettings] = useState(false)
   const [settingsMessage, setSettingsMessage] = useState('')
 
@@ -49,7 +52,16 @@ function ManagerDashboard() {
   useEffect(() => {
     if (user?.restaurantId) joinRestaurantRoom(user.restaurantId)
     loadSnapshot()
-    if (user?.restaurantId) getRestaurantById(user.restaurantId).then((restaurant) => setSeatingDuration(restaurant.defaultSeatingDurationMinutes || 60)).catch(() => {})
+    if (user?.restaurantId) {
+      Promise.all([getRestaurantById(user.restaurantId), getRestaurantMaxCapacity(user.restaurantId)])
+        .then(([restaurant, capacity]) => {
+          setSeatingDuration(restaurant.defaultSeatingDurationMinutes || 60)
+          setMaxCapacity(capacity.maxCapacity || 0)
+          setUseMaxPartySizeOverride(capacity.isOverride)
+          setMaxPartySizeOverride(restaurant.maxPartySizeOverride ?? '')
+        })
+        .catch(() => {})
+    }
   }, [joinRestaurantRoom, loadSnapshot, user?.restaurantId])
 
   async function saveSettings(event) {
@@ -57,8 +69,15 @@ function ManagerDashboard() {
     setIsSavingSettings(true)
     setSettingsMessage('')
     try {
-      const response = await updateRestaurantSettings(user.restaurantId, { defaultSeatingDurationMinutes: Number(seatingDuration) })
+      const response = await updateRestaurantSettings(user.restaurantId, {
+        defaultSeatingDurationMinutes: Number(seatingDuration),
+        maxPartySizeOverride: useMaxPartySizeOverride ? Number(maxPartySizeOverride) : null,
+      })
       setSeatingDuration(response.restaurant.defaultSeatingDurationMinutes)
+      const capacity = await getRestaurantMaxCapacity(user.restaurantId)
+      setMaxCapacity(capacity.maxCapacity || 0)
+      setUseMaxPartySizeOverride(capacity.isOverride)
+      setMaxPartySizeOverride(response.restaurant.maxPartySizeOverride ?? '')
       setSettingsMessage('Saved.')
     } catch (requestError) {
       setSettingsMessage(requestError.message || 'Unable to save seating time.')
@@ -94,6 +113,8 @@ function ManagerDashboard() {
         <div className={styles.panelHeading}><div><span className={styles.panelKicker}>Reservation settings</span><h2>Average seating time</h2></div></div>
         <form className={styles.formGrid} onSubmit={saveSettings}>
           <label>Minutes per seating<input type="number" min="15" max="240" step="1" value={seatingDuration} onChange={(event) => setSeatingDuration(event.target.value)} /></label>
+          <label className={styles.checkboxField}><input type="checkbox" checked={useMaxPartySizeOverride} onChange={(event) => setUseMaxPartySizeOverride(event.target.checked)} /> Use a manual maximum party size</label>
+          <label>Maximum party size<input type="number" min="1" step="1" value={maxPartySizeOverride} placeholder={String(maxCapacity)} disabled={!useMaxPartySizeOverride} onChange={(event) => setMaxPartySizeOverride(event.target.value)} /><small>Current effective maximum: {maxCapacity}</small></label>
           <div><button type="submit" className={styles.primaryButton} disabled={isSavingSettings || !user?.restaurantId}>{isSavingSettings ? 'Saving...' : 'Save seating time'}</button>{settingsMessage && <p className={styles.status} role="status">{settingsMessage}</p>}</div>
         </form>
       </section>

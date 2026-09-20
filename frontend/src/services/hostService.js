@@ -1,5 +1,9 @@
 import { apiRequest } from '../api'
 
+export const SEATING_BUFFER_MINUTES = 15
+export const getEarliestSeatingTime = (timeSlot) => new Date(new Date(timeSlot).getTime() - SEATING_BUFFER_MINUTES * 60000)
+export const isSeatingAvailable = (timeSlot, now = Date.now()) => now >= getEarliestSeatingTime(timeSlot).getTime()
+
 export const getHostFloorLayout = () => apiRequest('/floor-layout')
 export const updateHostTableStatus = (id, status) => apiRequest(`/tables/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) })
 export const getHostReservations = (filters = {}) => {

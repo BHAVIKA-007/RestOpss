@@ -14,6 +14,10 @@ export function getRestaurantById(id) {
   return apiRequest(`/restaurants/${id}`)
 }
 
+export function getRestaurantMaxCapacity(id) {
+  return apiRequest(`/restaurants/${id}/max-capacity`)
+}
+
 export function getMenuByRestaurantId(id) {
   return apiRequest(`/menu/${id}`)
 }

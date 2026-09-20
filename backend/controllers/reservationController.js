@@ -139,7 +139,7 @@ exports.suggestCombination = async (req, res) => {
     );
 
     const exceedsMaxCapacity = candidates.length === 0
-      && parsedPartySize > await reservationService.getTheoreticalMaxSeatablePartySize(restaurantId.toString());
+      && parsedPartySize > await reservationService.getRestaurantMaxCapacity(restaurantId.toString());
 
     return res.json({ suggestions: candidates, exceedsMaxCapacity });
   } catch (err) {

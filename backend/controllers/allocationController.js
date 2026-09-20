@@ -70,7 +70,7 @@ exports.joinWaitlist = async (req, res) => {
       });
     }
 
-    const maximumSeatablePartySize = await reservationService.getTheoreticalMaxSeatablePartySize(restaurantId);
+    const maximumSeatablePartySize = await reservationService.getRestaurantMaxCapacity(restaurantId);
     const needsManagerReview = parsedGroupSize > maximumSeatablePartySize;
     const entry = await WaitingQueue.create({
       restaurantId,

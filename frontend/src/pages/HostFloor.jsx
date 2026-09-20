@@ -3,11 +3,10 @@ import { Link } from 'react-router-dom'
 import FloorPlanGrid from '../components/FloorPlanGrid/FloorPlanGrid'
 import { useAuth } from '../context/AuthContext'
 import { useSocket, useSocketEvent } from '../context/SocketContext'
-import { getHostFloorLayout, getHostReservations, seatReservation, updateHostTableStatus } from '../services/hostService'
+import { getEarliestSeatingTime, getHostFloorLayout, getHostReservations, isSeatingAvailable, seatReservation, updateHostTableStatus } from '../services/hostService'
 import styles from './HostPages.module.css'
 
 const getId = (value) => typeof value === 'object' && value ? value._id : value
-const SEATING_BUFFER_MINUTES = 15
 
 function HostFloor() {
   const { user } = useAuth()
@@ -44,7 +43,7 @@ function HostFloor() {
   async function seat(id) {
     setWorking(true); setError('')
     const reservation = reservations.find((item) => getId(item) === id)
-    if (reservation && Date.now() < new Date(reservation.timeSlot).getTime() - SEATING_BUFFER_MINUTES * 60 * 1000) {
+    if (reservation && !isSeatingAvailable(reservation.timeSlot)) {
       setError('Too early to seat this reservation - please wait until closer to the reserved time')
       setWorking(false)
       return

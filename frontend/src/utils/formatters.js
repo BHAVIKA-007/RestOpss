@@ -14,16 +14,28 @@ export function getId(value) {
 const customerReservationStatusLabels = {
   locked: 'Awaiting Confirmation',
   confirmed: 'Confirmed',
+  missed: 'Missed',
   seated: 'Seated',
   completed: 'Completed',
   cancelled: 'Cancelled',
   no_show: 'No Show'
 }
 
-export function getCustomerFacingStatusLabel(status, timeSlot, lockExpiresAt) {
+export function getCustomerFacingStatusLabel(status, timeSlot, lockExpiresAt, durationMinutes) {
   if (status === 'locked' && [timeSlot, lockExpiresAt].some((value) => value && new Date(value).getTime() < Date.now())) {
     return 'Expired'
   }
 
+  if (status === 'confirmed' && hasReservationWindowPassed(timeSlot, durationMinutes)) {
+    return customerReservationStatusLabels.missed
+  }
+
   return customerReservationStatusLabels[status] || status.replace('_', ' ')
+}
+
+export function hasReservationWindowPassed(timeSlot, durationMinutes, now = Date.now()) {
+  const start = new Date(timeSlot).getTime()
+  const duration = Number(durationMinutes)
+  if (!Number.isFinite(start) || !Number.isFinite(duration)) return false
+  return now >= start + duration * 60000
 }

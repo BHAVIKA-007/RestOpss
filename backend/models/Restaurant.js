@@ -5,6 +5,7 @@ const RestaurantSchema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   manager: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   defaultSeatingDurationMinutes: { type: Number, default: 60, min: 15, max: 240 },
+  maxPartySizeOverride: { type: Number, default: null, min: 1 },
   address: { type: String },
   phone: { type: String },
   cuisine: { type: [String], default: [] },

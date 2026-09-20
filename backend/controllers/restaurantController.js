@@ -1,5 +1,6 @@
 const Restaurant = require("../models/Restaurant");
 const User = require("../models/User");
+const reservationService = require("../services/reservationService");
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -51,7 +52,7 @@ exports.getPublicRestaurants = async (req, res) => {
 
 exports.getPublicRestaurant = async (req, res) => {
   try {
-    const restaurant = await Restaurant.findById(req.params.id).select("_id name address phone cuisine defaultSeatingDurationMinutes");
+    const restaurant = await Restaurant.findById(req.params.id).select("_id name address phone cuisine defaultSeatingDurationMinutes maxPartySizeOverride");
 
     if (!restaurant) {
       return res.status(404).json({ message: "Restaurant not found" });
@@ -68,21 +69,49 @@ exports.getPublicRestaurant = async (req, res) => {
 };
 
 exports.updateSettings = async (req, res) => {
-  const { defaultSeatingDurationMinutes } = req.body;
+  const hasDuration = Object.prototype.hasOwnProperty.call(req.body, "defaultSeatingDurationMinutes");
+  const hasMaxPartySizeOverride = Object.prototype.hasOwnProperty.call(req.body, "maxPartySizeOverride");
+  const { defaultSeatingDurationMinutes, maxPartySizeOverride } = req.body;
 
-  if (typeof defaultSeatingDurationMinutes !== "number" || !Number.isInteger(defaultSeatingDurationMinutes) || defaultSeatingDurationMinutes < 15 || defaultSeatingDurationMinutes > 240) {
+  if (!hasDuration && !hasMaxPartySizeOverride) {
+    return res.status(400).json({ message: "At least one restaurant setting is required" });
+  }
+  if (hasDuration && (typeof defaultSeatingDurationMinutes !== "number" || !Number.isInteger(defaultSeatingDurationMinutes) || defaultSeatingDurationMinutes < 15 || defaultSeatingDurationMinutes > 240)) {
     return res.status(400).json({ message: "defaultSeatingDurationMinutes must be a whole number between 15 and 240 minutes" });
   }
+  if (hasMaxPartySizeOverride && maxPartySizeOverride !== null && (typeof maxPartySizeOverride !== "number" || !Number.isInteger(maxPartySizeOverride) || maxPartySizeOverride < 1)) {
+    return res.status(400).json({ message: "maxPartySizeOverride must be null or a positive whole number" });
+  }
+
+  const updates = {};
+  if (hasDuration) updates.defaultSeatingDurationMinutes = defaultSeatingDurationMinutes;
+  if (hasMaxPartySizeOverride) updates.maxPartySizeOverride = maxPartySizeOverride;
 
   try {
     const restaurant = await Restaurant.findByIdAndUpdate(
       req.params.id,
-      { defaultSeatingDurationMinutes },
+      updates,
       { new: true, runValidators: true }
     );
     if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
     res.json({ message: "Restaurant settings updated", restaurant });
   } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getMaxCapacity = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findById(req.params.id).select("maxPartySizeOverride").lean();
+    if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
+
+    const maxCapacity = await reservationService.getRestaurantMaxCapacity(req.params.id);
+    res.json({
+      maxCapacity,
+      isOverride: restaurant.maxPartySizeOverride !== null && restaurant.maxPartySizeOverride !== undefined
+    });
+  } catch (err) {
+    if (err.name === "CastError") return res.status(404).json({ message: "Restaurant not found" });
     res.status(500).json({ message: err.message });
   }
 };

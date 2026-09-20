@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import NavBar from '../components/NavBar'
-import { getRestaurantById } from '../services/restaurantService'
+import { getRestaurantById, getRestaurantMaxCapacity } from '../services/restaurantService'
 import styles from './Booking.module.css'
 
 const RESERVATION_LEAD_TIME_MINUTES = 30
+const DEFAULT_PARTY_SIZE_UPPER_BOUND = 30
+const PARTY_SIZE_HEADROOM = 15
 
 const formatLocalDate = (value = new Date()) => {
   const year = value.getFullYear()
@@ -39,19 +41,30 @@ function Booking() {
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [partySize, setPartySize] = useState(2)
+  const [partySizeUpperBound, setPartySizeUpperBound] = useState(DEFAULT_PARTY_SIZE_UPPER_BOUND)
   const [error, setError] = useState('')
   const [timeMessage, setTimeMessage] = useState('')
 
   useEffect(() => {
     getRestaurantById(id).then(setRestaurant).catch(() => setError('Restaurant not found'))
+    getRestaurantMaxCapacity(id)
+      .then(({ maxCapacity }) => {
+        const computedMaxCapacity = Number(maxCapacity)
+        if (Number.isFinite(computedMaxCapacity) && computedMaxCapacity > 0) {
+          setPartySizeUpperBound(computedMaxCapacity + PARTY_SIZE_HEADROOM)
+        } else {
+          setPartySizeUpperBound(DEFAULT_PARTY_SIZE_UPPER_BOUND)
+        }
+      })
+      .catch(() => setPartySizeUpperBound(DEFAULT_PARTY_SIZE_UPPER_BOUND))
   }, [id])
 
   const today = formatLocalDate()
   const minimumTime = date === today ? formatLocalTime(getMinimumTodayTime()) : undefined
-  const canContinue = Boolean(date && time && partySize >= 1 && partySize <= 20 && date >= today && isBookingTimeValid(date, time))
+  const canContinue = Boolean(date && time && partySize >= 1 && partySize <= partySizeUpperBound && date >= today && isBookingTimeValid(date, time))
 
   function changePartySize(amount) {
-    setPartySize((current) => Math.min(20, Math.max(1, current + amount)))
+    setPartySize((current) => Math.min(partySizeUpperBound, Math.max(1, current + amount)))
   }
 
   function handleDateChange(event) {
@@ -110,7 +123,7 @@ function Booking() {
                   <strong>{partySize}</strong>
                   <button type="button" onClick={() => changePartySize(1)} aria-label="Increase party size">+</button>
                 </div>
-                <small>Between 1 and 20 guests</small>
+                <small>Between 1 and {partySizeUpperBound} guests</small>
               </fieldset>
               <button type="submit" className={styles.continueButton} disabled={!canContinue}>Continue to table selection <span aria-hidden="true">&rarr;</span></button>
             </form>

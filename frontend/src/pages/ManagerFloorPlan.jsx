@@ -102,7 +102,26 @@ function ManagerFloorPlan() {
         ? await updateManagerTable(tableDraft._id, payload)
         : await createManagerTable(payload)
       const savedTable = response.table
-      setLayout((current) => ({ ...current, tables: tableDraft._id ? current.tables.map((table) => (table._id || table.id) === tableDraft._id ? savedTable : table) : [...current.tables, savedTable] }))
+      setLayout((current) => {
+        if (!tableDraft._id) return { ...current, tables: [...current.tables, savedTable] }
+
+        const previousTable = current.tables.find((table) => (table._id || table.id) === tableDraft._id)
+        const previousAdjacentIds = new Set((previousTable?.adjacentTo || []).map((id) => String(id)))
+        const nextAdjacentIds = new Set((savedTable.adjacentTo || []).map((id) => String(id)))
+
+        return {
+          ...current,
+          tables: current.tables.map((table) => {
+            const tableId = String(table._id || table.id)
+            if (tableId === String(tableDraft._id)) return savedTable
+            if (!previousAdjacentIds.has(tableId) && !nextAdjacentIds.has(tableId)) return table
+
+            const adjacentTo = (table.adjacentTo || []).filter((id) => String(id) !== String(tableDraft._id))
+            if (nextAdjacentIds.has(tableId)) adjacentTo.push(savedTable._id)
+            return { ...table, adjacentTo: [...new Set(adjacentTo.map((id) => String(id)))] }
+          }),
+        }
+      })
       setSelectedTableId(savedTable._id)
       setTableDraft({ ...savedTable, adjacentTo: savedTable.adjacentTo || [] })
       setActiveTool(null)

@@ -63,6 +63,17 @@ exports.saveFloorLayout = async (req, res) => {
     const elementEntries = Array.isArray(elements) ? elements : [];
 
     const restaurantId = req.restaurantId || req.user.restaurantId;
+    const requestedAdjacency = new Map(
+      tableEntries
+        .filter((entry) => entry._id)
+        .map((entry) => [entry._id.toString(), new Set((entry.adjacentTo || []).map((id) => id.toString()))])
+    );
+
+    for (const [tableId, adjacentIds] of requestedAdjacency) {
+      for (const adjacentId of adjacentIds) {
+        requestedAdjacency.get(adjacentId)?.add(tableId);
+      }
+    }
 
     for (const [index, entry] of tableEntries.entries()) {
       const validationMessage = validateTableEntry(entry, restaurantId);
@@ -136,11 +147,11 @@ exports.saveFloorLayout = async (req, res) => {
               gridY: entry.gridY,
               shape: entry.shape,
               combinable: entry.combinable,
-              adjacentTo: entry.adjacentTo || []
+              adjacentTo: [...(requestedAdjacency.get(entry._id.toString()) || entry.adjacentTo || [])]
             },
             { new: true, runValidators: true, session }
           );
-          await syncTableAdjacency({ table: updatedTable, previousAdjacentTo: existingTable.adjacentTo, nextAdjacentTo: entry.adjacentTo || [], restaurantId, session });
+          await syncTableAdjacency({ table: updatedTable, previousAdjacentTo: existingTable.adjacentTo, nextAdjacentTo: updatedTable.adjacentTo, restaurantId, session });
           createdOrUpdatedTables.push(updatedTable);
         } else {
           const createdTable = await Table.create([

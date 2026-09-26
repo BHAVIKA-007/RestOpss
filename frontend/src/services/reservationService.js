@@ -30,6 +30,10 @@ export function cancelMyWaitlistRequest(id) {
   return apiRequest(`/allocation/waiting/${id}/cancel`, { method: 'PATCH' })
 }
 
+export function respondToMyWaitlistRequest(id, accept) {
+  return apiRequest(`/allocation/waiting/${id}/respond`, { method: 'PATCH', body: JSON.stringify({ accept }) })
+}
+
 export function getMyReservations() {
   return apiRequest('/reservations/my')
 }

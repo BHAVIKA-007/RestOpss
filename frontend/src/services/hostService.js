@@ -20,5 +20,6 @@ export const suggestCombination = ({ restaurantId, partySize, timeSlot }) => {
 export const allocateWalkIn = (details) => apiRequest('/allocation/allocate', { method: 'POST', body: JSON.stringify(details) })
 export const getHostWaitlist = () => apiRequest('/allocation/waiting/position')
 export const respondToWaitlist = (id, accept, tableId) => apiRequest(`/allocation/waiting/${id}/respond`, { method: 'PATCH', body: JSON.stringify({ accept, ...(tableId ? { tableId } : {}) }) })
+export const seatGuestWaitlistEntry = (id) => apiRequest(`/allocation/waiting/${id}/seat`, { method: 'PATCH' })
 export const expireHostWaitlist = (id) => apiRequest(`/allocation/waiting/${id}/expire-check`, { method: 'PATCH' })
 export const cancelHostWaitlist = (id) => apiRequest(`/allocation/waiting/${id}/cancel`, { method: 'PATCH' })

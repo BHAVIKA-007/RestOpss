@@ -1,10 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useRef } from 'react'
 import { io } from 'socket.io-client'
+import { useAuth } from './AuthContext'
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
 const SocketContext = createContext(null)
 
 export function SocketProvider({ children }) {
+  const { user } = useAuth()
   const socketRef = useRef(null)
 
   useEffect(() => {
@@ -16,6 +18,11 @@ export function SocketProvider({ children }) {
       socketRef.current = null
     }
   }, [])
+
+  useEffect(() => {
+    const userId = user?._id || user?.id
+    if (userId) socketRef.current?.emit('joinUser', userId)
+  }, [user?._id, user?.id])
 
   const value = useMemo(() => ({
     joinRestaurantRoom(restaurantId) {

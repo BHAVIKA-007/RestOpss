@@ -23,6 +23,17 @@ const waitingSchema = new mongoose.Schema({
     min: 15
   },
 
+  matchedTableIds: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Table" }],
+    default: []
+  },
+
+  reservation: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Reservation",
+    default: null
+  },
+
   customer: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",

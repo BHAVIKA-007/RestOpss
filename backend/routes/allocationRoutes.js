@@ -9,6 +9,7 @@ const {
   getWaitingQueueWithPosition,
   getMyWaitingQueue,
   cancelWaitlistEntry,
+  seatGuestWaitlistEntry,
   respondToWaitlistNotification,
   expireWaitlistEntry,
   managerOverride
@@ -37,8 +38,9 @@ router.get("/waiting/mine", auth, getMyWaitingQueue);
 router.get("/waiting/position", auth, isManagerOrHost, getWaitingQueueWithPosition);
 
 router.patch("/waiting/:id/cancel", auth, cancelWaitlistEntry);
+router.patch("/waiting/:id/seat", auth, isManagerOrHost, seatGuestWaitlistEntry);
 
-// Respond to waitlist notification: accept or decline (customer or host/manager)
+// Respond to a customer notification: accept or decline
 router.patch("/waiting/:id/respond", auth, respondToWaitlistNotification);
 
 // Manual expiry check for notified or stale waiting entries (manager or host)

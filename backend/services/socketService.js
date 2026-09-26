@@ -16,6 +16,10 @@ const initSocket = (server) => {
       if (!restaurantId) return;
       socket.join(`restaurant:${restaurantId}`);
     });
+    socket.on("joinUser", (userId) => {
+      if (!userId) return;
+      socket.join(`user:${userId}`);
+    });
   });
 
   return io;
@@ -30,7 +34,13 @@ const emitToRestaurant = (restaurantId, eventName, payload) => {
   io.to(`restaurant:${restaurantId}`).emit(eventName, payload);
 };
 
+const emitToUser = (userId, eventName, payload) => {
+  if (!userId || !io || typeof eventName !== "string") return;
+  io.to(`user:${userId}`).emit(eventName, payload);
+};
+
 module.exports = {
   initSocket,
-  emitToRestaurant
+  emitToRestaurant,
+  emitToUser
 };

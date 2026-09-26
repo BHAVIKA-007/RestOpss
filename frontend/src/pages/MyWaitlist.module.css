@@ -9,6 +9,12 @@
 .item p { margin: 0.45rem 0; color: var(--color-muted); font-size: 0.82rem; }
 .cancelButton { margin-top: 0.6rem; padding: 0.5rem 0.7rem; border: 1px solid #e2aaaa; border-radius: 999px; color: #8c393b; background: transparent; cursor: pointer; font-size: 0.72rem; font-weight: 800; }
 .cancelButton:disabled { cursor: wait; opacity: 0.6; }
+.notice { padding: 0.85rem 1rem; border-radius: 8px; color: #23613a; background: #e1f3e7; }
+.responseActions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.7rem; }
+.acceptButton, .declineButton { padding: 0.55rem 0.75rem; border: 0; border-radius: 7px; cursor: pointer; font-size: 0.72rem; font-weight: 800; }
+.acceptButton { color: var(--color-white); background: var(--color-accent); }
+.declineButton { color: var(--color-dark); background: var(--color-light-gray); }
+.acceptButton:disabled, .declineButton:disabled { cursor: wait; opacity: 0.6; }
 .empty { color: var(--color-muted); font-size: 0.85rem; }
 .error { padding: 0.9rem; border-radius: 8px; color: #a6292c; background: #fff0f0; }
 

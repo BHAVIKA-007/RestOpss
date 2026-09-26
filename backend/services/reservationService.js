@@ -16,7 +16,7 @@ const timeWindowsOverlap = (firstStart, firstDurationMinutes, secondStart, secon
   return new Date(firstStart).getTime() < secondEnd && new Date(secondStart).getTime() < firstEnd;
 };
 
-const buildCombinationCandidates = ({ tables, combinableTables = tables, partySize, maxTables = 4, overshootCap = null }) => {
+const buildCombinationCandidates = ({ tables, combinableTables = tables, partySize, maxTables = 4, overshootCap = null, resultLimit = 3 }) => {
   if (!Array.isArray(tables) || tables.length === 0) return [];
 
   const parsedPartySize = Number(partySize);
@@ -107,7 +107,7 @@ const buildCombinationCandidates = ({ tables, combinableTables = tables, partySi
       return a.tableIds.join(",").localeCompare(b.tableIds.join(","));
     })
     .filter((candidate) => overshootCap === null || candidate.overshoot <= overshootCap)
-    .slice(0, 3);
+    .slice(0, resultLimit);
 };
 
 /**

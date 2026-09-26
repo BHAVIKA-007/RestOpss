@@ -44,6 +44,7 @@ import CashierBilling from './pages/CashierBilling'
 import ChefKitchen from './pages/ChefKitchen'
 import ChangePasswordRequired from './pages/ChangePasswordRequired'
 import CustomerHome from './pages/CustomerHome'
+import WaitlistConfirmation from './pages/WaitlistConfirmation'
 
 function App() {
   return (
@@ -64,6 +65,7 @@ function App() {
             <Route path="/customer" element={<ProtectedRoute role="customer" />}>
               <Route index element={<CustomerHome />} />
               <Route path="waitlist" element={<MyWaitlist />} />
+              <Route path="waitlist/confirmation" element={<WaitlistConfirmation />} />
             </Route>
             <Route path="/change-password-required" element={<ChangePasswordRequired />} />
             <Route path="/account" element={<Account />} />

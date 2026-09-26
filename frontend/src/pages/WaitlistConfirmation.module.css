@@ -1,0 +1,10 @@
+.page { min-height: 100svh; background: var(--color-light-gray); }
+.content { width: min(100% - 2rem, 720px); margin: 0 auto; padding: 4rem 0; }
+.eyebrow { margin: 0 0 0.7rem; color: var(--color-accent); font-size: 0.72rem; font-weight: 800; text-transform: uppercase; }
+.content h1 { margin: 0 0 1rem; font-family: var(--font-display); font-size: clamp(2.5rem, 7vw, 4rem); font-weight: 500; line-height: 1; }
+.message { color: var(--color-muted); font-size: 1rem; line-height: 1.6; }
+.message strong { color: var(--color-dark); }
+.review { margin-top: 1.2rem; padding: 0.9rem 1rem; border-radius: 8px; color: #785119; background: #fff1c9; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1.6rem; }
+.actions a { padding: 0.75rem 0.9rem; border-radius: 7px; color: var(--color-white); background: var(--color-accent); font-size: 0.8rem; font-weight: 800; text-decoration: none; }
+.actions a + a { color: var(--color-dark); background: var(--color-white); }

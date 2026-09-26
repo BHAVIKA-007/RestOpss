@@ -383,12 +383,12 @@ exports.cancelReservation = async (req, res) => {
         status: table.status
       });
     }));
-    await Promise.all(tables.map((table) => rematchWaitingEntries({
+    await rematchWaitingEntries({
       restaurantId: reservation.restaurantId,
-      tableId: table._id,
+      tableIds: tables.map((table) => table._id),
       availabilityStart: reservation.timeSlot,
       availabilityDurationMinutes: reservation.durationMinutes
-    })));
+    });
 
     emitToRestaurant(reservation.restaurantId.toString(), "reservation:cancelled", {
       reservationId: reservation._id.toString(),
@@ -472,12 +472,12 @@ exports.completeReservation = async (req, res) => {
         status: t.status
       });
     }));
-    await Promise.all(tables.map((table) => rematchWaitingEntries({
+    await rematchWaitingEntries({
       restaurantId: reservation.restaurantId,
-      tableId: table._id,
+      tableIds: tables.map((table) => table._id),
       availabilityStart: new Date(),
       availabilityDurationMinutes: reservation.durationMinutes
-    })));
+    });
 
     res.json({ message: "Reservation completed", reservation });
   } catch (err) {
@@ -516,12 +516,12 @@ exports.markNoShow = async (req, res) => {
         status: t.status
       });
     }));
-    await Promise.all(tables.map((table) => rematchWaitingEntries({
+    await rematchWaitingEntries({
       restaurantId: reservation.restaurantId,
-      tableId: table._id,
+      tableIds: tables.map((table) => table._id),
       availabilityStart: reservation.timeSlot,
       availabilityDurationMinutes: reservation.durationMinutes
-    })));
+    });
 
     emitToRestaurant(reservation.restaurantId.toString(), "reservation:cancelled", {
       reservationId: reservation._id.toString(),

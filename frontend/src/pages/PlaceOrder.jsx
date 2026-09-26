@@ -77,18 +77,14 @@ function PlaceOrder() {
     return () => { isCurrent = false }
   }, [id, joinRestaurantRoom, location.state, retryKey])
 
-  useEffect(() => {
-    if (!reservation || reservation.status === 'seated') return undefined
-    const refreshReservation = async () => {
-      try {
-        const reservations = await getMyReservations()
-        const current = reservations.find((item) => getId(item) === id)
-        if (current) setReservation(current)
-      } catch { /* The initial load already has the actionable error state. */ }
-    }
-    const interval = window.setInterval(refreshReservation, 10000)
-    return () => window.clearInterval(interval)
-  }, [id, reservation?.status])
+  const updateReservationFromSocket = useCallback((event, status) => {
+    if (event.reservationId !== id) return
+    setReservation((current) => current ? { ...current, status, lockExpiresAt: event.lockExpiresAt ?? current.lockExpiresAt } : current)
+  }, [id])
+  useSocketEvent('reservation:approved', (event) => updateReservationFromSocket(event, 'confirmed'))
+  useSocketEvent('reservation:confirmed', (event) => updateReservationFromSocket(event, 'confirmed'))
+  useSocketEvent('reservation:seated', (event) => updateReservationFromSocket(event, 'seated'))
+  useSocketEvent('reservation:cancelled', (event) => updateReservationFromSocket(event, 'cancelled'))
 
   const updateFromSocket = useCallback((event, nextStatus) => {
     setOrders((current) => current.map((item) => getId(item) === event.orderId ? { ...item, status: event.status || nextStatus } : item))

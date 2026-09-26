@@ -18,8 +18,16 @@ export function createReservation(payload) {
   return apiRequest('/reservations', { method: 'POST', body: JSON.stringify(payload) })
 }
 
-export function joinWaitlist(restaurantId, groupSize) {
-  return apiRequest('/allocation/waiting/join', { method: 'POST', body: JSON.stringify({ restaurantId, groupSize }) })
+export function joinWaitlist(restaurantId, groupSize, requestedTimeSlot) {
+  return apiRequest('/allocation/waiting/join', { method: 'POST', body: JSON.stringify({ restaurantId, groupSize, requestedTimeSlot }) })
+}
+
+export function getMyWaitlistRequests() {
+  return apiRequest('/allocation/waiting/mine')
+}
+
+export function cancelMyWaitlistRequest(id) {
+  return apiRequest(`/allocation/waiting/${id}/cancel`, { method: 'PATCH' })
 }
 
 export function getMyReservations() {

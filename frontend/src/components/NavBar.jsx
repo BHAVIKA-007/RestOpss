@@ -20,6 +20,7 @@ function NavBar() {
         <span className={styles.greeting}>{user?.name || 'Welcome'}</span>
         {user?.role === 'customer' && <Link to="/restaurants" className={styles.accountLink}>Restaurants</Link>}
         {user?.role === 'customer' && <Link to="/reservations/mine" className={styles.accountLink}>My Reservations</Link>}
+        {user?.role === 'customer' && <Link to="/customer/waitlist" className={styles.accountLink}>My Waitlist</Link>}
         {user?.role === 'customer' && <Link to="/orders/mine" className={styles.accountLink}>My Orders</Link>}
         {user?.role === 'customer' && <Link to="/owner/restaurants/new" className={styles.ownerLink}>Own a restaurant?</Link>}
         <Link to="/account" className={styles.accountLink}>Account</Link>

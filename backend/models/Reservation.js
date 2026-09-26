@@ -6,7 +6,10 @@ const buildLockedTableSlots = ({ tables, timeSlot, durationMinutes }) => {
   if (!Array.isArray(tables) || tables.length === 0) return [];
 
   const startMs = new Date(timeSlot).getTime();
-  const durationMs = (Number(durationMinutes) || 60) * 60 * 1000;
+  if (!Number.isFinite(Number(durationMinutes)) || Number(durationMinutes) <= 0) {
+    throw new Error("Reservation duration is required");
+  }
+  const durationMs = Number(durationMinutes) * 60 * 1000;
   const endMs = startMs + durationMs;
 
   const startBucket = Math.floor(startMs / LOCKED_TABLE_BUCKET_MS) * LOCKED_TABLE_BUCKET_MS;
@@ -61,8 +64,7 @@ const reservationSchema = new mongoose.Schema({
 
   durationMinutes: {
     type: Number,
-    required: true,
-    default: 60
+    required: true
   },
 
   status: {

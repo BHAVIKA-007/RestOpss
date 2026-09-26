@@ -70,7 +70,7 @@ function BookingTables() {
         if (rankedSuggestions.exceedsMaxCapacity && autoJoinedReviewKey.current !== reviewKey) {
           autoJoinedReviewKey.current = reviewKey
           try {
-            const response = await joinWaitlist(id, partySize)
+            const response = await joinWaitlist(id, partySize, timeSlot)
             setWaitlistMessage(response.message || 'Your request was sent to the restaurant for manager review.')
           } catch (requestError) {
             setWaitlistMessage(requestError.message || 'Unable to send your request for manager review.')
@@ -108,7 +108,7 @@ function BookingTables() {
     setIsJoiningWaitlist(true)
     setWaitlistMessage('')
     try {
-      const response = await joinWaitlist(id, partySize)
+      const response = await joinWaitlist(id, partySize, timeSlot)
       setWaitlistMessage(response.needsManagerReview
         ? 'This party size needs manager attention because it exceeds the restaurant\'s current seating capacity.'
         : `You joined the waitlist at position ${response.position}.`)

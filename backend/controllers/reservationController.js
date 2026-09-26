@@ -4,11 +4,10 @@ const Table = require("../models/Table");
 const Restaurant = require("../models/Restaurant");
 const reservationService = require("../services/reservationService");
 const { emitToRestaurant } = require("../services/socketService");
+const { rematchWaitingEntries } = require("../services/allocationService");
+const { RESERVATION_LEAD_TIME_MS, SEATING_BUFFER_MS, NO_SHOW_GRACE_MS, noShowGraceMinutes } = require("../config/timing");
 
 const LOCK_DURATION_MS = 10 * 60 * 1000;
-const SEATING_BUFFER_MINUTES = 15;
-const RESERVATION_LEAD_TIME_MS = 30 * 60 * 1000;
-const NO_SHOW_GRACE_MINUTES = 15;
 const reservationStatuses = new Set(["locked", "confirmed", "seated", "completed", "cancelled", "no_show"]);
 
 const getDateRange = (date) => {
@@ -384,6 +383,12 @@ exports.cancelReservation = async (req, res) => {
         status: table.status
       });
     }));
+    await Promise.all(tables.map((table) => rematchWaitingEntries({
+      restaurantId: reservation.restaurantId,
+      tableId: table._id,
+      availabilityStart: reservation.timeSlot,
+      availabilityDurationMinutes: reservation.durationMinutes
+    })));
 
     emitToRestaurant(reservation.restaurantId.toString(), "reservation:cancelled", {
       reservationId: reservation._id.toString(),
@@ -411,7 +416,7 @@ exports.seatReservation = async (req, res) => {
 
     if (reservation.status !== "confirmed") return res.status(400).json({ message: "Only confirmed reservations can be seated" });
 
-    const earliestSeatingTime = new Date(reservation.timeSlot).getTime() - SEATING_BUFFER_MINUTES * 60 * 1000;
+    const earliestSeatingTime = new Date(reservation.timeSlot).getTime() - SEATING_BUFFER_MS;
     if (Date.now() < earliestSeatingTime) {
       return res.status(400).json({ message: "Too early to seat this reservation - please wait until closer to the reserved time" });
     }
@@ -430,6 +435,10 @@ exports.seatReservation = async (req, res) => {
         status: t.status
       });
     }));
+    emitToRestaurant(reservation.restaurantId.toString(), "reservation:seated", {
+      reservationId: reservation._id.toString(),
+      restaurantId: reservation.restaurantId.toString()
+    });
 
     res.json({ message: "Reservation seated", reservation });
   } catch (err) {
@@ -463,6 +472,12 @@ exports.completeReservation = async (req, res) => {
         status: t.status
       });
     }));
+    await Promise.all(tables.map((table) => rematchWaitingEntries({
+      restaurantId: reservation.restaurantId,
+      tableId: table._id,
+      availabilityStart: new Date(),
+      availabilityDurationMinutes: reservation.durationMinutes
+    })));
 
     res.json({ message: "Reservation completed", reservation });
   } catch (err) {
@@ -479,9 +494,9 @@ exports.markNoShow = async (req, res) => {
 
     if (reservation.status !== "confirmed") return res.status(400).json({ message: "Only confirmed reservations can be marked no-show" });
 
-    const allowedAt = new Date(new Date(reservation.timeSlot).getTime() + NO_SHOW_GRACE_MINUTES * 60000);
+    const allowedAt = new Date(new Date(reservation.timeSlot).getTime() + NO_SHOW_GRACE_MS);
     if (Date.now() < allowedAt.getTime()) {
-      return res.status(400).json({ message: `Cannot mark no-show before ${NO_SHOW_GRACE_MINUTES} minutes after the reservation time` });
+      return res.status(400).json({ message: `Cannot mark no-show before ${noShowGraceMinutes} minutes after the reservation time` });
     }
 
     reservation.status = "no_show";
@@ -501,6 +516,12 @@ exports.markNoShow = async (req, res) => {
         status: t.status
       });
     }));
+    await Promise.all(tables.map((table) => rematchWaitingEntries({
+      restaurantId: reservation.restaurantId,
+      tableId: table._id,
+      availabilityStart: reservation.timeSlot,
+      availabilityDurationMinutes: reservation.durationMinutes
+    })));
 
     emitToRestaurant(reservation.restaurantId.toString(), "reservation:cancelled", {
       reservationId: reservation._id.toString(),

@@ -3,8 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import { getRestaurantById, getRestaurantMaxCapacity } from '../services/restaurantService'
 import styles from './Booking.module.css'
+import { useTiming } from '../context/TimingContext'
 
-const RESERVATION_LEAD_TIME_MINUTES = 30
 const DEFAULT_PARTY_SIZE_UPPER_BOUND = 30
 
 const formatLocalDate = (value = new Date()) => {
@@ -16,26 +16,27 @@ const formatLocalDate = (value = new Date()) => {
 
 const formatLocalTime = (value) => `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`
 
-const getMinimumTodayTime = (now = new Date()) => {
-  const minimum = new Date(now.getTime() + RESERVATION_LEAD_TIME_MINUTES * 60 * 1000)
+const getMinimumTodayTime = (leadTimeMinutes, now = new Date()) => {
+  const minimum = new Date(now.getTime() + leadTimeMinutes * 60 * 1000)
   minimum.setSeconds(0, 0)
   if (now.getSeconds() > 0 || now.getMilliseconds() > 0) minimum.setMinutes(minimum.getMinutes() + 1)
   return minimum
 }
 
-const isBookingTimeValid = (selectedDate, selectedTime, now = new Date()) => {
+const isBookingTimeValid = (selectedDate, selectedTime, leadTimeMinutes, now = new Date()) => {
   if (!selectedDate || !selectedTime || selectedDate < formatLocalDate(now)) return false
   if (selectedDate > formatLocalDate(now)) return true
 
   const [hours, minutes] = selectedTime.split(':').map(Number)
   const selectedDateTime = new Date(now)
   selectedDateTime.setHours(hours, minutes, 0, 0)
-  return selectedDateTime.getTime() >= now.getTime() + RESERVATION_LEAD_TIME_MINUTES * 60 * 1000
+  return selectedDateTime.getTime() >= now.getTime() + leadTimeMinutes * 60 * 1000
 }
 
 function Booking() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const timing = useTiming()
   const [restaurant, setRestaurant] = useState(null)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
@@ -59,8 +60,8 @@ function Booking() {
   }, [id])
 
   const today = formatLocalDate()
-  const minimumTime = date === today ? formatLocalTime(getMinimumTodayTime()) : undefined
-  const canContinue = Boolean(date && time && partySize >= 1 && partySize <= partySizeUpperBound && date >= today && isBookingTimeValid(date, time))
+  const minimumTime = date === today && timing ? formatLocalTime(getMinimumTodayTime(timing.reservationLeadTimeMinutes)) : undefined
+  const canContinue = Boolean(timing && date && time && partySize >= 1 && partySize <= partySizeUpperBound && date >= today && isBookingTimeValid(date, time, timing.reservationLeadTimeMinutes))
 
   function changePartySize(amount) {
     setPartySize((current) => Math.min(partySizeUpperBound, Math.max(1, current + amount)))
@@ -70,7 +71,7 @@ function Booking() {
     const nextDate = event.target.value
     setDate(nextDate)
 
-    if (time && !isBookingTimeValid(nextDate, time)) {
+    if (time && timing && !isBookingTimeValid(nextDate, time, timing.reservationLeadTimeMinutes)) {
       setTime('')
       setTimeMessage('That time is no longer available for this date. Please choose a new time.')
     } else {
@@ -81,13 +82,13 @@ function Booking() {
   function handleTimeChange(event) {
     const nextTime = event.target.value
     setTime(nextTime)
-    setTimeMessage(isBookingTimeValid(date, nextTime) ? '' : 'Please choose a time at least 30 minutes from now.')
+    setTimeMessage(timing && isBookingTimeValid(date, nextTime, timing.reservationLeadTimeMinutes) ? '' : 'Please choose a valid time.')
   }
 
   function handleSubmit(event) {
     event.preventDefault()
-    if (!isBookingTimeValid(date, time)) {
-      setTimeMessage('Please choose a time at least 30 minutes from now.')
+    if (!timing || !isBookingTimeValid(date, time, timing.reservationLeadTimeMinutes)) {
+      setTimeMessage('Please choose a valid time.')
       return
     }
     if (!canContinue) return

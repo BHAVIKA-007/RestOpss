@@ -12,6 +12,17 @@ const waitingSchema = new mongoose.Schema({
     required: true
   },
 
+  requestedTimeSlot: {
+    type: Date,
+    required: true
+  },
+
+  requestedDurationMinutes: {
+    type: Number,
+    required: true,
+    min: 15
+  },
+
   customer: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",

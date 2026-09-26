@@ -1,6 +1,7 @@
 const Table = require("../models/Table");
 const User = require("../models/User");
 const { syncTableAdjacency, removeTableFromAdjacency } = require("../services/tableAdjacencyService");
+const { rematchAfterTableAvailable } = require("../services/allocationService");
 
 const handleDuplicateTableError = (res, err) => {
   if (err?.code === 11000) {
@@ -149,6 +150,7 @@ exports.updateHostTableStatus = async (req, res) => {
     );
 
     if (!table) return res.status(404).json({ message: "Table not found" });
+    if (status === "available") await rematchAfterTableAvailable(table);
     return res.json({ message: "Table status updated", table });
   } catch (err) {
     return res.status(500).json({ message: err.message });
@@ -190,6 +192,9 @@ exports.updateTable = async (req, res) => {
       await syncTableAdjacency({ table, previousAdjacentTo, nextAdjacentTo: updateData.adjacentTo || [], restaurantId: req.restaurantId });
     }
     await table.save();
+    if (table.status === "available" && updateData.status === "available") {
+      await rematchAfterTableAvailable(table);
+    }
 
     res.json({ message: "Table updated", table });
   } catch (err) {

@@ -7,7 +7,8 @@ const {
   freeTable,
   getWaitingQueue,
   getWaitingQueueWithPosition,
-  resolveWaitlistEntry,
+  getMyWaitingQueue,
+  cancelWaitlistEntry,
   respondToWaitlistNotification,
   expireWaitlistEntry,
   managerOverride
@@ -30,17 +31,18 @@ router.post("/free", auth, allowAllocationStaff, freeTable);
 
 // Waiting queue → manager or host
 router.get("/waiting", auth, isManagerOrHost, getWaitingQueue);
+router.get("/waiting/mine", auth, getMyWaitingQueue);
 
 // Waiting queue with position and wait time computed → manager or host
 router.get("/waiting/position", auth, isManagerOrHost, getWaitingQueueWithPosition);
 
-router.patch("/waiting/:id/resolve", auth, isManagerOrHost, resolveWaitlistEntry);
+router.patch("/waiting/:id/cancel", auth, cancelWaitlistEntry);
 
 // Respond to waitlist notification: accept or decline (customer or host/manager)
 router.patch("/waiting/:id/respond", auth, respondToWaitlistNotification);
 
-// Manual expiry check for notified entries (manager only)
-router.patch("/waiting/:id/expire-check", auth, isManager, expireWaitlistEntry);
+// Manual expiry check for notified or stale waiting entries (manager or host)
+router.patch("/waiting/:id/expire-check", auth, isManagerOrHost, expireWaitlistEntry);
 
 // Manager override (big groups / combine tables)
 router.post("/override", auth, isManager, managerOverride);

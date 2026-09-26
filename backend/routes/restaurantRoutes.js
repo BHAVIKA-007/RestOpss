@@ -3,7 +3,9 @@ const router = express.Router();
 
 const { registerRestaurant, getPublicRestaurants, getPublicRestaurant, getMyRestaurant, getMyRestaurants, assignManager, replaceManager, removeManager, updateSettings, getMaxCapacity } = require("../controllers/restaurantController");
 const { auth, isManagerOrOwnerOfRestaurant } = require("../middleware/auth");
+const { getTiming } = require("../controllers/timingController");
 
+router.get("/config/timing", getTiming);
 router.post("/", auth, registerRestaurant);
 router.get("/", getPublicRestaurants);
 router.get("/my", auth, getMyRestaurants);

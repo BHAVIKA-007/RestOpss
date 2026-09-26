@@ -4,11 +4,13 @@ import StatusBadge from '../components/StatusBadge'
 import { getManagerReservations } from '../services/managerService'
 import { getEarliestSeatingTime, isSeatingAvailable, markNoShowReservation, seatReservation } from '../services/hostService'
 import styles from './ManagerPages.module.css'
+import { useTiming } from '../context/TimingContext'
 
 const statusOptions = ['locked', 'confirmed', 'seated', 'completed', 'cancelled', 'no_show']
 
 function ManagerReservations() {
   const location = useLocation()
+  const timing = useTiming()
   const isHostView = location.pathname.startsWith('/host/')
   const today = new Date().toLocaleDateString('en-CA')
   const [reservations, setReservations] = useState([])
@@ -38,8 +40,8 @@ function ManagerReservations() {
     setWorkingId(id)
     setError('')
     const reservation = reservations.find((item) => item._id === id)
-    if (reservation && !isSeatingAvailable(reservation.timeSlot, now)) {
-      setError(`Too early to seat this reservation - available at ${getEarliestSeatingTime(reservation.timeSlot).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`)
+    if (reservation && timing && !isSeatingAvailable(reservation.timeSlot, timing.seatingBufferMinutes, now)) {
+      setError(`Too early to seat this reservation - available at ${getEarliestSeatingTime(reservation.timeSlot, timing.seatingBufferMinutes).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`)
       setWorkingId('')
       return
     }
@@ -68,14 +70,16 @@ function ManagerReservations() {
 
   function noShowControl(reservation) {
     if (reservation.status !== 'confirmed') return null
-    const availableAt = new Date(new Date(reservation.timeSlot).getTime() + 15 * 60000)
+    if (!timing) return <span className={styles.status}>Loading timing...</span>
+    const availableAt = new Date(new Date(reservation.timeSlot).getTime() + timing.noShowGraceMinutes * 60000)
     if (now < availableAt.getTime()) return <span className={styles.status}>Available at {availableAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
     return <button type="button" className={styles.smallDanger} disabled={workingId === reservation._id} onClick={() => markNoShow(reservation._id)}>{workingId === reservation._id ? 'Marking...' : 'Mark No-Show'}</button>
   }
 
   function seatControl(reservation) {
     if (reservation.status !== 'confirmed') return null
-    const availableAt = getEarliestSeatingTime(reservation.timeSlot)
+    if (!timing) return <span className={styles.status}>Loading timing...</span>
+    const availableAt = getEarliestSeatingTime(reservation.timeSlot, timing.seatingBufferMinutes)
     const tooEarly = now < availableAt.getTime()
     return <span className={styles.rowActions}><button type="button" className={styles.smallButton} disabled={workingId === reservation._id || tooEarly} onClick={() => seatConfirmedReservation(reservation._id)}>{workingId === reservation._id ? 'Seating...' : 'Seat'}</button>{tooEarly && <small className={styles.status}>Available at {availableAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</small>}</span>
   }

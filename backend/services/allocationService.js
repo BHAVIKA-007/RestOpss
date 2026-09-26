@@ -1,9 +1,90 @@
 const Table = require("../models/Table");
 const WaitingQueue = require("../models/WaitingQueue");
+const Restaurant = require("../models/Restaurant");
 const reservationService = require("./reservationService");
 const { emitToRestaurant } = require("./socketService");
 
 const WAITLIST_RESPONSE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const WALK_IN_EXPIRY_WINDOW_MS = 2 * 60 * 60 * 1000;
+
+const getRestaurantDuration = async (restaurantId) => {
+  const restaurant = await Restaurant.findById(restaurantId).select("defaultSeatingDurationMinutes");
+  if (!restaurant) throw new Error("Restaurant not found");
+  if (!Number.isFinite(Number(restaurant.defaultSeatingDurationMinutes))) {
+    throw new Error("Restaurant seating duration is required");
+  }
+  return Number(restaurant.defaultSeatingDurationMinutes);
+};
+
+exports.rematchAfterTableAvailable = async (table) => {
+  const requestedDurationMinutes = await getRestaurantDuration(table.restaurantId);
+  return exports.rematchWaitingEntries({
+    restaurantId: table.restaurantId,
+    tableId: table._id,
+    availabilityStart: new Date(),
+    availabilityDurationMinutes: requestedDurationMinutes
+  });
+};
+
+const notifyWaitingEntry = async (entry, table, restaurantId) => {
+  table.status = "reserved";
+  await table.save();
+
+  const now = new Date();
+  entry.status = "notified";
+  entry.notifiedAt = now;
+  entry.responseDeadline = new Date(now.getTime() + WAITLIST_RESPONSE_WINDOW_MS);
+  await entry.save();
+
+  emitToRestaurant(restaurantId.toString(), "waitlist:notified", {
+    waitingQueueId: entry._id.toString(),
+    restaurantId: restaurantId.toString(),
+    tableId: table._id.toString(),
+    responseDeadline: entry.responseDeadline,
+    responseDeadlineMs: entry.responseDeadline.getTime()
+  });
+
+  return {
+    allocated: true,
+    groupId: entry._id,
+    tableId: table._id,
+    status: "notified",
+    responseDeadlineMs: entry.responseDeadline.getTime(),
+    notificationChannel: entry.notificationChannel
+  };
+};
+
+exports.rematchWaitingEntries = async ({ restaurantId, tableId, availabilityStart, availabilityDurationMinutes }) => {
+  const table = await Table.findOne({ _id: tableId, restaurantId, status: "available" });
+  if (!table) return { allocated: false, reason: "table_not_available" };
+
+  const now = new Date();
+  const waitingList = await WaitingQueue.find({
+    restaurantId,
+    status: "waiting",
+    needsManagerReview: { $ne: true }
+  }).sort({ requestedTimeSlot: 1 });
+
+  for (const entry of waitingList) {
+    if (isWaitingEntryExpired(entry, now.getTime())) {
+      entry.status = "expired";
+      await entry.save();
+      continue;
+    }
+
+    if (table.capacity < entry.groupSize) continue;
+    if (!reservationService.timeWindowsOverlap(
+      entry.requestedTimeSlot,
+      entry.requestedDurationMinutes,
+      availabilityStart,
+      availabilityDurationMinutes
+    )) continue;
+
+    return notifyWaitingEntry(entry, table, restaurantId);
+  }
+
+  return { allocated: false, reason: "no_compatible_group" };
+};
 
 /*
   NORMAL ALLOCATION
@@ -55,6 +136,7 @@ exports.allocateTableService = async (groupSize, restaurantId, customerId = null
     }
 
   const maximumSeatablePartySize = await reservationService.getRestaurantMaxCapacity(restaurantId);
+  const requestedDurationMinutes = await getRestaurantDuration(restaurantId);
   const needsManagerReview = groupSize > maximumSeatablePartySize;
   const entry = await WaitingQueue.create({
     restaurantId,
@@ -62,6 +144,8 @@ exports.allocateTableService = async (groupSize, restaurantId, customerId = null
     customer: customerId || null,
     guestName: guestName || null,
     guestPhone: guestPhone || null,
+    requestedTimeSlot: new Date(),
+    requestedDurationMinutes,
     needsManagerReview
   });
 
@@ -78,10 +162,9 @@ exports.allocateTableService = async (groupSize, restaurantId, customerId = null
     };
   }
 
-  const position = await WaitingQueue.countDocuments({
+  const position = await exports.countActiveWaitingEntries({
     restaurantId,
-    status: "waiting",
-    createdAt: { $lt: entry.createdAt }
+    beforeCreatedAt: entry.createdAt
   });
 
   return {
@@ -111,50 +194,14 @@ exports.freeTableService = async (tableId, restaurantId) => {
     status: table.status
   });
 
-  // Find FIRST compatible waiting entry in FIFO order
-  // Skip incompatible entries (too large for this table), don't stop
-  const waitingList = await WaitingQueue.find({
+  const requestedDurationMinutes = await getRestaurantDuration(restaurantId);
+  const result = await exports.rematchWaitingEntries({
     restaurantId,
-    status: "waiting",
-    needsManagerReview: { $ne: true }
-  }).sort({ createdAt: 1 });
-
-  for (let group of waitingList) {
-    // Check if this table can fit this group
-    if (table.capacity >= group.groupSize) {
-      // Found a compatible match
-      // Mark table as reserved to hold it for this waitlist entry
-      table.status = "reserved";
-      await table.save();
-
-      // Mark waitlist entry as notified, not allocated yet
-      const now = new Date();
-      group.status = "notified";
-      group.notifiedAt = now;
-      group.responseDeadline = new Date(now.getTime() + WAITLIST_RESPONSE_WINDOW_MS);
-      await group.save();
-
-      // Emit notification socket event
-      emitToRestaurant(restaurantId.toString(), "waitlist:notified", {
-        waitingQueueId: group._id.toString(),
-        restaurantId: restaurantId.toString(),
-        tableId: table._id.toString(),
-        responseDeadline: group.responseDeadline
-      });
-
-      return {
-        freed: true,
-        notified: true,
-        waitingQueueId: group._id,
-        tableId: table._id,
-        responseDeadlineMs: group.responseDeadline.getTime(),
-        notificationChannel: group.notificationChannel
-      };
-    }
-    // If not compatible, continue to next entry (don't stop here)
-  }
-
-  return { freed: true, allocated: false };
+    tableId,
+    availabilityStart: new Date(),
+    availabilityDurationMinutes: requestedDurationMinutes
+  });
+  return { freed: true, ...result };
 };
 
 /*
@@ -172,48 +219,13 @@ exports.allocateFromWaitlistForTable = async (tableId, restaurantId) => {
     return { allocated: false, reason: "table_not_available" };
   }
 
-  const waitingList = await WaitingQueue.find({
+  const requestedDurationMinutes = await getRestaurantDuration(restaurantId);
+  return exports.rematchWaitingEntries({
     restaurantId,
-    status: "waiting",
-    needsManagerReview: { $ne: true }
-  }).sort({ createdAt: 1 });
-
-  for (let group of waitingList) {
-    if (table.capacity >= group.groupSize) {
-      // Found a compatible match
-      table.status = "reserved";
-      await table.save();
-
-      const now = new Date();
-      group.status = "notified";
-      group.notifiedAt = now;
-      group.responseDeadline = new Date(now.getTime() + WAITLIST_RESPONSE_WINDOW_MS);
-      await group.save();
-
-      emitToRestaurant(restaurantId.toString(), "table:statusChanged", {
-        tableId: table._id.toString(),
-        restaurantId: restaurantId.toString(),
-        status: table.status
-      });
-
-      emitToRestaurant(restaurantId.toString(), "waitlist:notified", {
-        waitingQueueId: group._id.toString(),
-        restaurantId: restaurantId.toString(),
-        tableId: table._id.toString(),
-        responseDeadlineMs: group.responseDeadline.getTime()
-      });
-
-      return {
-        allocated: true,
-        groupId: group._id,
-        tableId: table._id,
-        status: "notified",
-        notificationChannel: group.notificationChannel
-      };
-    }
-  }
-
-  return { allocated: false, reason: "no_compatible_group" };
+    tableId,
+    availabilityStart: new Date(),
+    availabilityDurationMinutes: requestedDurationMinutes
+  });
 };
 
 /*
@@ -223,8 +235,16 @@ exports.viewWaitingQueue = async (restaurantId) => {
   if (!restaurantId)
     throw new Error("restaurantId required");
 
-  return await WaitingQueue.find({ restaurantId, status: "waiting" })
-    .sort({ createdAt: 1 });
+  const entries = await WaitingQueue.find({ restaurantId, status: "waiting" })
+    .sort({ requestedTimeSlot: 1 });
+  return entries.map(decorateWaitingEntry);
+};
+
+exports.viewCustomerWaitingQueue = async (customerId) => {
+  const entries = await WaitingQueue.find({ customer: customerId })
+    .populate("restaurantId", "name")
+    .sort({ createdAt: -1 });
+  return entries.map(decorateWaitingEntry);
 };
 
 /*
@@ -240,7 +260,7 @@ exports.viewWaitingQueueWithPosition = async (restaurantId) => {
   const now = new Date();
 
   // Compute 1-indexed position based on 'waiting' status entries only
-  const waitingEntries = entries.filter(e => e.status === "waiting" && !e.needsManagerReview);
+  const waitingEntries = entries.filter(e => e.status === "waiting" && !e.needsManagerReview && !isWaitingEntryExpired(e, now.getTime()));
 
   entries.sort((a, b) => {
     if (Boolean(a.needsManagerReview) !== Boolean(b.needsManagerReview)) {
@@ -250,7 +270,8 @@ exports.viewWaitingQueueWithPosition = async (restaurantId) => {
   });
 
   return entries.map(entry => {
-    const position = entry.status === "waiting" && !entry.needsManagerReview
+    const expired = entry.status === "waiting" && isWaitingEntryExpired(entry, now.getTime());
+    const position = entry.status === "waiting" && !entry.needsManagerReview && !expired
       ? waitingEntries.findIndex(e => e._id.equals(entry._id)) + 1
       : null;
 
@@ -259,6 +280,7 @@ exports.viewWaitingQueueWithPosition = async (restaurantId) => {
 
     return {
       ...entry.toObject(),
+      status: expired ? "expired" : entry.status,
       displayName: entry.customer ? undefined : (entry.guestName || "Walk-in guest"),
       position,
       waitingSinceMinutes
@@ -321,3 +343,30 @@ exports.managerOverrideAllocate = async (groupSize, restaurantId) => {
     totalCapacity: totalCap
   };
 };
+
+const isWaitingEntryExpired = (entry, now = Date.now()) => {
+  if (entry.status !== "waiting") return false;
+
+  const requestedAt = new Date(entry.requestedTimeSlot).getTime();
+  const createdAt = new Date(entry.createdAt).getTime();
+  const wasScheduledForFuture = requestedAt > createdAt;
+  const expiryAt = wasScheduledForFuture
+    ? requestedAt + Number(entry.requestedDurationMinutes) * 60000
+    : requestedAt + WALK_IN_EXPIRY_WINDOW_MS;
+  return expiryAt <= now;
+};
+
+const decorateWaitingEntry = (entry) => isWaitingEntryExpired(entry)
+  ? { ...entry.toObject(), status: "expired" }
+  : entry;
+
+exports.countActiveWaitingEntries = async ({ restaurantId, beforeCreatedAt }) => {
+  const entries = await WaitingQueue.find({
+    restaurantId,
+    status: "waiting",
+    ...(beforeCreatedAt ? { createdAt: { $lt: beforeCreatedAt } } : {})
+  }).select("requestedTimeSlot requestedDurationMinutes createdAt status");
+  return entries.filter((entry) => !isWaitingEntryExpired(entry)).length;
+};
+
+exports.isWaitingEntryExpired = isWaitingEntryExpired;

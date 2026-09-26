@@ -20,7 +20,7 @@ function ManagerDashboard() {
   const [snapshot, setSnapshot] = useState(emptySnapshot)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
-  const [seatingDuration, setSeatingDuration] = useState(60)
+  const [seatingDuration, setSeatingDuration] = useState('')
   const [maxCapacity, setMaxCapacity] = useState(0)
   const [maxPartySizeOverride, setMaxPartySizeOverride] = useState('')
   const [useMaxPartySizeOverride, setUseMaxPartySizeOverride] = useState(false)
@@ -55,7 +55,7 @@ function ManagerDashboard() {
     if (user?.restaurantId) {
       Promise.all([getRestaurantById(user.restaurantId), getRestaurantMaxCapacity(user.restaurantId)])
         .then(([restaurant, capacity]) => {
-          setSeatingDuration(restaurant.defaultSeatingDurationMinutes || 60)
+          setSeatingDuration(restaurant.defaultSeatingDurationMinutes)
           setMaxCapacity(capacity.maxCapacity || 0)
           setUseMaxPartySizeOverride(capacity.isOverride)
           setMaxPartySizeOverride(restaurant.maxPartySizeOverride ?? '')

@@ -2,6 +2,7 @@ const Order = require("../models/Order");
 const Table = require("../models/Table");
 const Reservation = require("../models/Reservation");
 const { emitToRestaurant } = require("../services/socketService");
+const { rematchAfterTableAvailable } = require("../services/allocationService");
 
 // Get unpaid completed orders
 exports.getPendingBills = async (req, res) => {
@@ -72,6 +73,7 @@ exports.markPaid = async (req, res) => {
       table.currentOrder = null;
       table.combinedGroupId = null;
       await table.save();
+      await rematchAfterTableAvailable(table);
 
       emitToRestaurant(table.restaurantId.toString(), "table:statusChanged", {
         tableId: table._id.toString(),

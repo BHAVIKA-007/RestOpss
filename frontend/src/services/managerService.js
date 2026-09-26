@@ -59,10 +59,10 @@ export const getManagerReservations = (filters = {}) => {
 export const approveManagerReservation = (id) => apiRequest(`/reservations/${id}/approve`, { method: 'PATCH' })
 export const rejectManagerReservation = (id) => apiRequest(`/reservations/${id}/reject`, { method: 'PATCH' })
 
-export const getManagerWaitlist = () => apiRequest('/allocation/waiting')
+export const getManagerWaitlist = () => apiRequest('/allocation/waiting/position')
 export const expireManagerWaitlistEntry = (id) => apiRequest(`/allocation/waiting/${id}/expire-check`, {
   method: 'PATCH',
 })
-export const resolveManagerWaitlistEntry = (id) => apiRequest(`/allocation/waiting/${id}/resolve`, { method: 'PATCH' })
+export const cancelManagerWaitlistEntry = (id) => apiRequest(`/allocation/waiting/${id}/cancel`, { method: 'PATCH' })
 
 export const getManagerKitchenQueue = () => apiRequest('/kitchen')

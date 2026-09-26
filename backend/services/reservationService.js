@@ -10,6 +10,12 @@ const buildCandidateKey = (tableIds) => [...tableIds].sort().join("|");
 
 const sumCapacities = (tables) => tables.reduce((total, table) => total + Number(table.capacity || 0), 0);
 
+const timeWindowsOverlap = (firstStart, firstDurationMinutes, secondStart, secondDurationMinutes) => {
+  const firstEnd = new Date(firstStart).getTime() + Number(firstDurationMinutes) * 60000;
+  const secondEnd = new Date(secondStart).getTime() + Number(secondDurationMinutes) * 60000;
+  return new Date(firstStart).getTime() < secondEnd && new Date(secondStart).getTime() < firstEnd;
+};
+
 const buildCombinationCandidates = ({ tables, combinableTables = tables, partySize, maxTables = 4, overshootCap = null }) => {
   if (!Array.isArray(tables) || tables.length === 0) return [];
 
@@ -115,8 +121,11 @@ const buildCombinationCandidates = ({ tables, combinableTables = tables, partySi
  * @returns {Promise<boolean>} true if overlap found
  */
 exports.checkTableOverlap = async (tableIds, timeSlot, durationMinutes, excludeReservationId) => {
+  if (!Number.isFinite(Number(durationMinutes)) || Number(durationMinutes) <= 0) {
+    throw new Error("Reservation duration is required");
+  }
+
   const requestedStart = new Date(timeSlot);
-  const requestedEnd = new Date(requestedStart.getTime() + (durationMinutes || 60) * 60000);
 
   const query = {
     tables: { $in: tableIds },
@@ -129,9 +138,11 @@ exports.checkTableOverlap = async (tableIds, timeSlot, durationMinutes, excludeR
 
   for (const r of existing) {
     const existingStart = new Date(r.timeSlot);
-    const existingEnd = new Date(existingStart.getTime() + (r.durationMinutes || 60) * 60000);
+    if (!Number.isFinite(Number(r.durationMinutes)) || Number(r.durationMinutes) <= 0) {
+      throw new Error("Stored reservation duration is required");
+    }
 
-    if (existingStart < requestedEnd && requestedStart < existingEnd) {
+    if (timeWindowsOverlap(requestedStart, durationMinutes, existingStart, r.durationMinutes)) {
       return true;
     }
   }
@@ -145,7 +156,7 @@ exports.findTableCombinations = async (restaurantId, partySize, timeSlot, durati
   const parsedPartySize = Number(partySize);
   if (!Number.isInteger(parsedPartySize) || parsedPartySize < 1) return [];
 
-  const requestedDuration = Number(durationMinutes || 60);
+  const requestedDuration = Number(durationMinutes);
   if (!Number.isFinite(requestedDuration) || requestedDuration <= 0) return [];
 
   const allTables = await Table.find({ restaurantId }).lean();
@@ -238,6 +249,7 @@ exports.getTableAvailability = async (restaurantId, timeSlot, durationMinutes) =
 
 module.exports = {
   checkTableOverlap: exports.checkTableOverlap,
+  timeWindowsOverlap,
   findTableCombinations: exports.findTableCombinations,
   buildCombinationCandidates,
   getCustomerOvershootCap: exports.getCustomerOvershootCap,

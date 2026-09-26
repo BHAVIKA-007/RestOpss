@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import StatusBadge from '../components/StatusBadge'
 import { useSocketEvent } from '../context/SocketContext'
-import { expireManagerWaitlistEntry, getManagerWaitlist, resolveManagerWaitlistEntry } from '../services/managerService'
+import { cancelManagerWaitlistEntry, expireManagerWaitlistEntry, getManagerWaitlist } from '../services/managerService'
 import styles from './ManagerPages.module.css'
 
 function decorateEntries(entries) {
@@ -27,6 +27,7 @@ function ManagerWaitlist() {
   useEffect(() => { loadWaitlist() }, [loadWaitlist])
   useSocketEvent('waitlist:notified', loadWaitlist)
   useSocketEvent('waitlist:managerReviewNeeded', loadWaitlist)
+  useSocketEvent('waitlist:cancelled', loadWaitlist)
 
   function isPastDeadline(entry) { return entry.status === 'notified' && entry.responseDeadline && new Date(entry.responseDeadline).getTime() < now }
 
@@ -36,17 +37,18 @@ function ManagerWaitlist() {
     try { await expireManagerWaitlistEntry(id); await loadWaitlist() } catch (requestError) { setError(requestError.message || 'Unable to check expiry.') } finally { setWorkingId('') }
   }
 
-  async function handleResolve(id) {
+  async function handleCancel(id) {
+    if (!window.confirm('Cancel this waitlist entry?')) return
     setWorkingId(id)
     setError('')
-    try { await resolveManagerWaitlistEntry(id); await loadWaitlist() } catch (requestError) { setError(requestError.message || 'Unable to resolve this entry.') } finally { setWorkingId('') }
+    try { await cancelManagerWaitlistEntry(id); await loadWaitlist() } catch (requestError) { setError(requestError.message || 'Unable to cancel this entry.') } finally { setWorkingId('') }
   }
 
   return (
     <div>
       <header className={styles.pageHeading}><p className={styles.eyebrow}>Manager workspace</p><h1>The waitlist, visible.</h1><p>Keep guests moving through the room with a clear next step.</p></header>
       {error && <p className={styles.error} role="alert">{error}</p>}
-      <section className={styles.panel}>{isLoading ? <p className={styles.status}>Loading waitlist...</p> : entries.length === 0 ? <p className={styles.status}>The waitlist is clear.</p> : <div className={styles.tableWrap}><table className={styles.dataTable}><thead><tr><th>Position</th><th>Guest</th><th>Waiting</th><th>Status</th><th aria-label="Actions" /></tr></thead><tbody>{entries.map((entry) => <tr className={entry.needsManagerReview ? styles.reviewRow : ''} key={entry._id}><td>{entry.position || '—'}</td><td><strong>{entry.guestName || entry.displayName || 'Walk-in guest'}</strong>{entry.groupSize && <small>Party of {entry.groupSize}</small>}</td><td>{entry.waitingSinceMinutes} min</td><td>{entry.needsManagerReview ? <StatusBadge status="manager_review" label="Needs Manager Decision" /> : <StatusBadge status={entry.status} />}</td><td>{entry.needsManagerReview ? <button type="button" className={styles.smallDanger} disabled={workingId === entry._id} onClick={() => handleResolve(entry._id)}>{workingId === entry._id ? 'Resolving...' : 'Mark Resolved'}</button> : isPastDeadline(entry) && <button type="button" className={styles.smallButton} disabled={workingId === entry._id} onClick={() => handleExpiry(entry._id)}>{workingId === entry._id ? 'Checking...' : 'Check Expiry'}</button>}</td></tr>)}</tbody></table></div>}</section>
+      <section className={styles.panel}>{isLoading ? <p className={styles.status}>Loading waitlist...</p> : entries.length === 0 ? <p className={styles.status}>The waitlist is clear.</p> : <div className={styles.tableWrap}><table className={styles.dataTable}><thead><tr><th>Position</th><th>Guest</th><th>Waiting</th><th>Status</th><th aria-label="Actions" /></tr></thead><tbody>{entries.map((entry) => <tr className={entry.needsManagerReview ? styles.reviewRow : ''} key={entry._id}><td>{entry.position || '—'}</td><td><strong>{entry.guestName || entry.displayName || 'Walk-in guest'}</strong>{entry.groupSize && <small>Party of {entry.groupSize}</small>}</td><td>{entry.waitingSinceMinutes} min</td><td>{entry.status === 'expired' ? <StatusBadge status="expired" label="Expired — no longer waiting" /> : entry.needsManagerReview ? <StatusBadge status="manager_review" label="Needs Manager Decision" /> : <StatusBadge status={entry.status} />}</td><td><button type="button" className={styles.smallDanger} disabled={workingId === entry._id} onClick={() => handleCancel(entry._id)}>{workingId === entry._id ? 'Cancelling...' : 'Cancel'}</button>{isPastDeadline(entry) && <button type="button" className={styles.smallButton} disabled={workingId === entry._id} onClick={() => handleExpiry(entry._id)}>{workingId === entry._id ? 'Checking...' : 'Check Expiry'}</button>}</td></tr>)}</tbody></table></div>}</section>
     </div>
   )
 }

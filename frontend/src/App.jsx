@@ -25,6 +25,7 @@ import Landing from './pages/Landing'
 import Login from './pages/Login'
 import MenuView from './pages/MenuView'
 import MyOrders from './pages/MyOrders'
+import MyWaitlist from './pages/MyWaitlist'
 import MyReservations from './pages/MyReservations'
 import ManagerAssignment from './pages/ManagerAssignment'
 import OwnerDashboard from './pages/OwnerDashboard'
@@ -35,6 +36,7 @@ import ReservationConfirm from './pages/ReservationConfirm'
 import ReservationDetail from './pages/ReservationDetail'
 import RestaurantOverview from './pages/RestaurantOverview'
 import { SocketProvider } from './context/SocketContext'
+import { TimingProvider } from './context/TimingContext'
 import ManagerLayout from './components/ManagerLayout'
 import HostLayout from './components/HostLayout'
 import WaiterLayout from './components/WaiterLayout'
@@ -47,7 +49,8 @@ function App() {
   return (
     <AuthProvider>
       <SocketProvider>
-        <BrowserRouter>
+        <TimingProvider>
+          <BrowserRouter>
           <PasswordChangeGate />
           <Routes>
           <Route path="/" element={<Landing />} />
@@ -60,6 +63,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/customer" element={<ProtectedRoute role="customer" />}>
               <Route index element={<CustomerHome />} />
+              <Route path="waitlist" element={<MyWaitlist />} />
             </Route>
             <Route path="/change-password-required" element={<ChangePasswordRequired />} />
             <Route path="/account" element={<Account />} />
@@ -116,7 +120,8 @@ function App() {
             </Route>
           </Route>
           </Routes>
-        </BrowserRouter>
+          </BrowserRouter>
+        </TimingProvider>
       </SocketProvider>
     </AuthProvider>
   )

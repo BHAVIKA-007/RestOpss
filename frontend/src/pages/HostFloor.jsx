@@ -5,11 +5,13 @@ import { useAuth } from '../context/AuthContext'
 import { useSocket, useSocketEvent } from '../context/SocketContext'
 import { getEarliestSeatingTime, getHostFloorLayout, getHostReservations, isSeatingAvailable, seatReservation, updateHostTableStatus } from '../services/hostService'
 import styles from './HostPages.module.css'
+import { useTiming } from '../context/TimingContext'
 
 const getId = (value) => typeof value === 'object' && value ? value._id : value
 
 function HostFloor() {
   const { user } = useAuth()
+  const timing = useTiming()
   const { joinRestaurantRoom } = useSocket()
   const [floor, setFloor] = useState({ tables: [], elements: [] })
   const [reservations, setReservations] = useState([])
@@ -43,7 +45,7 @@ function HostFloor() {
   async function seat(id) {
     setWorking(true); setError('')
     const reservation = reservations.find((item) => getId(item) === id)
-    if (reservation && !isSeatingAvailable(reservation.timeSlot)) {
+    if (reservation && timing && !isSeatingAvailable(reservation.timeSlot, timing.seatingBufferMinutes)) {
       setError('Too early to seat this reservation - please wait until closer to the reserved time')
       setWorking(false)
       return

@@ -3,8 +3,12 @@ const {
   freeTableService,
   viewWaitingQueue,
   viewWaitingQueueWithPosition,
+  viewCustomerWaitingQueue,
   managerOverrideAllocate,
-  allocateFromWaitlistForTable
+  allocateFromWaitlistForTable,
+  rematchWaitingEntries,
+  countActiveWaitingEntries,
+  isWaitingEntryExpired
 } = require("../services/allocationService");
 
 const WaitingQueue = require("../models/WaitingQueue");
@@ -13,7 +17,7 @@ const Restaurant = require("../models/Restaurant");
 const { emitToRestaurant } = require("../services/socketService");
 const reservationService = require("../services/reservationService");
 
-const WAITLIST_RESPONSE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const WAITLIST_DUPLICATE_WINDOW_MS = 30 * 60 * 1000;
 
 exports.allocateTable = async (req, res) => {
   try {
@@ -50,23 +54,36 @@ exports.freeTable = async (req, res) => {
 
 exports.joinWaitlist = async (req, res) => {
   try {
-    const { restaurantId, groupSize } = req.body;
+    const { restaurantId, groupSize, requestedTimeSlot } = req.body;
     const parsedGroupSize = Number(groupSize);
 
     if (!restaurantId || !parsedGroupSize || !Number.isInteger(parsedGroupSize) || parsedGroupSize < 1) {
       return res.status(400).json({ message: "restaurantId and a positive groupSize are required" });
     }
 
-    const existingEntry = await WaitingQueue.findOne({
+    const parsedTimeSlot = requestedTimeSlot ? new Date(requestedTimeSlot) : new Date();
+    if (Number.isNaN(parsedTimeSlot.getTime())) {
+      return res.status(400).json({ message: "requestedTimeSlot must be a valid date string" });
+    }
+
+    const restaurant = await Restaurant.findById(restaurantId).select("defaultSeatingDurationMinutes");
+    if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
+    if (!Number.isFinite(Number(restaurant.defaultSeatingDurationMinutes))) {
+      return res.status(500).json({ message: "Restaurant seating duration is required" });
+    }
+
+    const existingEntries = await WaitingQueue.find({
       restaurantId,
       customer: req.user._id,
       status: { $in: ["waiting", "notified"] }
-    }).sort({ createdAt: -1 });
+    }).select("requestedTimeSlot");
+    const hasNearbyRequest = existingEntries.some((entry) => Math.abs(
+      new Date(entry.requestedTimeSlot).getTime() - parsedTimeSlot.getTime()
+    ) <= WAITLIST_DUPLICATE_WINDOW_MS);
 
-    if (existingEntry) {
+    if (hasNearbyRequest) {
       return res.status(400).json({
-        message: "You're already on the waitlist for this restaurant",
-        queueId: existingEntry._id
+        message: "You already have a waitlist request within 30 minutes of this time"
       });
     }
 
@@ -76,6 +93,8 @@ exports.joinWaitlist = async (req, res) => {
       restaurantId,
       groupSize: parsedGroupSize,
       customer: req.user._id,
+      requestedTimeSlot: parsedTimeSlot,
+      requestedDurationMinutes: Number(restaurant.defaultSeatingDurationMinutes),
       needsManagerReview
     });
 
@@ -88,10 +107,9 @@ exports.joinWaitlist = async (req, res) => {
       return res.status(201).json({ status: "manager_review", needsManagerReview: true, queueId: entry._id });
     }
 
-    const position = await WaitingQueue.countDocuments({
+    const position = await countActiveWaitingEntries({
       restaurantId,
-      status: "waiting",
-      createdAt: { $lt: entry.createdAt }
+      beforeCreatedAt: entry.createdAt
     });
 
     return res.status(201).json({ status: entry.status, queueId: entry._id, position: position + 1 });
@@ -115,6 +133,19 @@ exports.getWaitingQueue = async (req, res) => {
   }
 };
 
+exports.getMyWaitingQueue = async (req, res) => {
+  try {
+    if (req.user.role !== "customer") {
+      return res.status(403).json({ error: "Only customers can view their waitlist requests" });
+    }
+
+    const entries = await viewCustomerWaitingQueue(req.user._id);
+    return res.json(entries);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
+
 // Get waiting queue with computed position and wait time
 exports.getWaitingQueueWithPosition = async (req, res) => {
   try {
@@ -131,22 +162,25 @@ exports.getWaitingQueueWithPosition = async (req, res) => {
   }
 };
 
-exports.resolveWaitlistEntry = async (req, res) => {
+exports.cancelWaitlistEntry = async (req, res) => {
   try {
     const entry = await WaitingQueue.findById(req.params.id);
     if (!entry) return res.status(404).json({ error: "Waitlist entry not found" });
-    if (!req.user.restaurantId || !entry.restaurantId.equals(req.user.restaurantId)) {
-      return res.status(403).json({ error: "Unauthorized" });
+
+    const isRestaurantStaff = ["manager", "host"].includes(req.user.role)
+      && req.user.restaurantId
+      && entry.restaurantId.equals(req.user.restaurantId);
+    const isOwnCustomerEntry = req.user.role === "customer"
+      && entry.customer
+      && entry.customer.equals(req.user._id);
+    if (!isRestaurantStaff && !isOwnCustomerEntry) {
+      return res.status(403).json({ error: "Only this restaurant's manager or host, or the entry's customer, can cancel it" });
     }
-    if (!["manager", "host"].includes(req.user.role)) {
-      return res.status(403).json({ error: "Only a manager or host can resolve a waitlist entry" });
-    }
-    if (entry.status === "cancelled") return res.status(400).json({ error: "Waitlist entry is already cancelled" });
 
     entry.status = "cancelled";
     await entry.save();
-    emitToRestaurant(entry.restaurantId.toString(), "waitlist:resolved", { waitingQueueId: entry._id.toString() });
-    return res.json({ success: true, message: "Waitlist entry marked resolved", entry });
+    emitToRestaurant(entry.restaurantId.toString(), "waitlist:cancelled", { waitingQueueId: entry._id.toString() });
+    return res.json({ success: true, message: "Waitlist entry cancelled", entry });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
@@ -298,27 +332,26 @@ exports.expireWaitlistEntry = async (req, res) => {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
-    // Only manager can trigger manual expiry check
-    if (req.user.role !== "manager") {
-      return res.status(403).json({ error: "Only manager can perform expiry check" });
+    // Only restaurant managers and hosts can trigger a manual expiry check.
+    if (!["manager", "host"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Only a manager or host can perform expiry check" });
     }
 
-    if (entry.status !== "notified") {
-      return res.status(400).json({ error: "Entry is not in notified state" });
+    const expiredWaitingEntry = isWaitingEntryExpired(entry);
+    const expiredNotification = entry.status === "notified" && new Date() > entry.responseDeadline;
+    if (!expiredWaitingEntry && !expiredNotification) {
+      return res.status(400).json({ error: "Entry is not eligible for an expiry check" });
     }
 
-    if (new Date() <= entry.responseDeadline) {
-      return res.status(400).json({ error: "Response deadline has not yet passed" });
+    if (expiredWaitingEntry || expiredNotification) {
+      entry.status = "expired";
+      await entry.save();
     }
-
-    // Mark as expired
-    entry.status = "expired";
-    await entry.save();
 
     // Try to re-run matching for this table if one was provided
     let reallocationResult = { allocated: false };
 
-    if (tableId) {
+    if (tableId && expiredNotification) {
       const table = await Table.findOne({ _id: tableId, restaurantId: req.user.restaurantId });
       if (table) {
         // Mark table as available for reallocation
@@ -341,7 +374,7 @@ exports.expireWaitlistEntry = async (req, res) => {
 
     return res.json({
       success: true,
-      message: "Entry expired; table freed for next entry",
+      message: expiredNotification ? "Entry expired; table freed for next entry" : "Waiting entry expired",
       entry,
       reallocated: reallocationResult.allocated,
       reallocationResult

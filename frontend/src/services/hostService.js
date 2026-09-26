@@ -1,8 +1,7 @@
 import { apiRequest } from '../api'
 
-export const SEATING_BUFFER_MINUTES = 15
-export const getEarliestSeatingTime = (timeSlot) => new Date(new Date(timeSlot).getTime() - SEATING_BUFFER_MINUTES * 60000)
-export const isSeatingAvailable = (timeSlot, now = Date.now()) => now >= getEarliestSeatingTime(timeSlot).getTime()
+export const getEarliestSeatingTime = (timeSlot, seatingBufferMinutes) => new Date(new Date(timeSlot).getTime() - seatingBufferMinutes * 60000)
+export const isSeatingAvailable = (timeSlot, seatingBufferMinutes, now = Date.now()) => now >= getEarliestSeatingTime(timeSlot, seatingBufferMinutes).getTime()
 
 export const getHostFloorLayout = () => apiRequest('/floor-layout')
 export const updateHostTableStatus = (id, status) => apiRequest(`/tables/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) })
@@ -22,4 +21,4 @@ export const allocateWalkIn = (details) => apiRequest('/allocation/allocate', { 
 export const getHostWaitlist = () => apiRequest('/allocation/waiting/position')
 export const respondToWaitlist = (id, accept, tableId) => apiRequest(`/allocation/waiting/${id}/respond`, { method: 'PATCH', body: JSON.stringify({ accept, ...(tableId ? { tableId } : {}) }) })
 export const expireHostWaitlist = (id) => apiRequest(`/allocation/waiting/${id}/expire-check`, { method: 'PATCH' })
-export const resolveHostWaitlist = (id) => apiRequest(`/allocation/waiting/${id}/resolve`, { method: 'PATCH' })
+export const cancelHostWaitlist = (id) => apiRequest(`/allocation/waiting/${id}/cancel`, { method: 'PATCH' })

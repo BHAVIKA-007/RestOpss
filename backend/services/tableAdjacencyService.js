@@ -31,7 +31,7 @@ exports.syncTableAdjacency = async ({ table, previousAdjacentTo = [], nextAdjace
   if (addedIds.length) {
     await Table.updateMany(
       { _id: { $in: addedIds }, restaurantId },
-      { $addToSet: { adjacentTo: table._id } },
+      { $addToSet: { adjacentTo: table._id }, $set: { combinable: true } },
       session ? { session } : undefined
     );
   }

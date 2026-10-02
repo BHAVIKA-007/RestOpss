@@ -103,7 +103,24 @@ function ManagerFloorPlan() {
         : await createManagerTable(payload)
       const savedTable = response.table
       setLayout((current) => {
-        if (!tableDraft._id) return { ...current, tables: [...current.tables, savedTable] }
+        if (!tableDraft._id) {
+          const adjacentIds = new Set((savedTable.adjacentTo || []).map((id) => String(id)))
+          return {
+            ...current,
+            tables: [
+              ...current.tables.map((table) => {
+                const tableId = String(table._id || table.id || table.clientId)
+                if (!adjacentIds.has(tableId)) return table
+                return {
+                  ...table,
+                  combinable: true,
+                  adjacentTo: [...new Set([...(table.adjacentTo || []).map((id) => String(id)), String(savedTable._id)])]
+                }
+              }),
+              savedTable
+            ]
+          }
+        }
 
         const previousTable = current.tables.find((table) => (table._id || table.id) === tableDraft._id)
         const previousAdjacentIds = new Set((previousTable?.adjacentTo || []).map((id) => String(id)))
@@ -118,7 +135,11 @@ function ManagerFloorPlan() {
 
             const adjacentTo = (table.adjacentTo || []).filter((id) => String(id) !== String(tableDraft._id))
             if (nextAdjacentIds.has(tableId)) adjacentTo.push(savedTable._id)
-            return { ...table, adjacentTo: [...new Set(adjacentTo.map((id) => String(id)))] }
+            return {
+              ...table,
+              combinable: nextAdjacentIds.has(tableId) ? true : table.combinable,
+              adjacentTo: [...new Set(adjacentTo.map((id) => String(id)))]
+            }
           }),
         }
       })
@@ -272,8 +293,8 @@ function ManagerFloorPlan() {
                 <label>Grid column <input type="number" min="0" value={tableDraft.gridX} onChange={(event) => updateTableDraft({ gridX: event.target.value })} /></label>
                 <label>Grid row <input type="number" min="0" value={tableDraft.gridY} onChange={(event) => updateTableDraft({ gridY: event.target.value })} /></label>
                 <label>Shape <select value={tableDraft.shape || 'square'} onChange={(event) => updateTableDraft({ shape: event.target.value })}><option value="square">Square</option><option value="round">Round</option><option value="rect">Rectangle</option></select></label>
-                <label className={styles.checkLabel}><input type="checkbox" checked={Boolean(tableDraft.combinable)} onChange={(event) => updateTableDraft({ combinable: event.target.checked })} /> Combinable</label>
-                <fieldset className={styles.adjacencyField}><legend>Adjacent tables</legend>{layout.tables.filter((table) => (table._id || table.id || table.clientId) !== (tableDraft._id || tableDraft.id || tableDraft.clientId)).map((table) => { const id = table._id || table.id || table.clientId; return <label className={styles.checkLabel} key={id}><input type="checkbox" checked={(tableDraft.adjacentTo || []).includes(id)} onChange={(event) => updateTableDraft({ adjacentTo: event.target.checked ? [...(tableDraft.adjacentTo || []), id] : (tableDraft.adjacentTo || []).filter((adjacentId) => adjacentId !== id) })} /> Table {table.number}</label> })}</fieldset>
+                <label className={styles.checkLabel}><input type="checkbox" checked={Boolean(tableDraft.combinable)} onChange={(event) => updateTableDraft({ combinable: event.target.checked, ...(event.target.checked ? {} : { adjacentTo: [] }) })} /> Combinable</label>
+                <fieldset className={styles.adjacencyField} disabled={!tableDraft.combinable}><legend>Adjacent tables</legend>{layout.tables.filter((table) => (table._id || table.id || table.clientId) !== (tableDraft._id || tableDraft.id || tableDraft.clientId)).map((table) => { const id = table._id || table.id || table.clientId; return <label className={styles.checkLabel} key={id}><input type="checkbox" checked={(tableDraft.adjacentTo || []).includes(id)} onChange={(event) => updateTableDraft({ adjacentTo: event.target.checked ? [...(tableDraft.adjacentTo || []), id] : (tableDraft.adjacentTo || []).filter((adjacentId) => adjacentId !== id) })} /> Table {table.number}</label> })}</fieldset>
                 {tableDraft._id && <label>Assigned Waiter <select value={typeof selectedTable?.assignedWaiter === 'object' ? selectedTable.assignedWaiter?._id || '' : selectedTable?.assignedWaiter || ''} onChange={changeAssignedWaiter}><option value="">Unassigned</option>{waiters.map((waiter) => <option value={waiter._id} key={waiter._id}>{waiter.name}</option>)}</select></label>}
                 {waiterMessage.text && <p className={waiterMessage.type === 'error' ? shared.error : styles.success} role="status">{waiterMessage.text}</p>}
                 <button type="button" className={styles.saveButton} onClick={saveTableDraft} disabled={isSavingTable}>{isSavingTable ? 'Saving table...' : tableDraft._id ? 'Save table changes' : 'Create table'}</button>

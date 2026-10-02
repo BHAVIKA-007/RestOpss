@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import { getRestaurantById, getRestaurantMaxCapacity } from '../services/restaurantService'
 import styles from './Booking.module.css'
@@ -36,11 +36,12 @@ const isBookingTimeValid = (selectedDate, selectedTime, leadTimeMinutes, now = n
 function Booking() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const timing = useTiming()
   const [restaurant, setRestaurant] = useState(null)
-  const [date, setDate] = useState('')
-  const [time, setTime] = useState('')
-  const [partySize, setPartySize] = useState(2)
+  const [date, setDate] = useState(() => searchParams.get('date') || '')
+  const [time, setTime] = useState(() => searchParams.get('time') || '')
+  const [partySize, setPartySize] = useState(() => Number(searchParams.get('partySize')) || 2)
   const [partySizeUpperBound, setPartySizeUpperBound] = useState(DEFAULT_PARTY_SIZE_UPPER_BOUND)
   const [error, setError] = useState('')
   const [timeMessage, setTimeMessage] = useState('')

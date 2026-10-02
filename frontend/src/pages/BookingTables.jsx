@@ -164,7 +164,7 @@ function BookingTables() {
             <button type="button" className={styles.bookButton} disabled={!chosenTableIds.length || isSubmitting || !suggestions.length} onClick={handleBooking}>{isSubmitting ? 'Holding table...' : chosenTableIds.length > 1 ? 'Book This Combination' : 'Book This Table'} <span>&rarr;</span></button>
           </>
         )}
-        <Link to={`/restaurants/${id}/book`} className={styles.backLink}>Back to reservation details</Link>
+        <Link to={`/restaurants/${id}/book?${searchParams.toString()}`} className={styles.backLink}>Back to reservation details</Link>
       </main>
     </div>
   )

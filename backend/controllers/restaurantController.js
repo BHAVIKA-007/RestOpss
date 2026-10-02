@@ -3,6 +3,10 @@ const User = require("../models/User");
 const reservationService = require("../services/reservationService");
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const invalidPhoneMessage = "Phone must contain only digits, spaces, +, -, and parentheses, and include at least 7 digits";
+const isValidPhone = (phone) => phone == null || (typeof phone === "string" && (
+  phone.trim() === "" || (/^[0-9 +()-]+$/.test(phone) && (phone.match(/[0-9]/g) || []).length >= 7)
+));
 
 exports.registerRestaurant = async (req, res) => {
   try {
@@ -10,6 +14,9 @@ exports.registerRestaurant = async (req, res) => {
 
     if (!name) {
       return res.status(400).json({ message: "Restaurant name is required" });
+    }
+    if (!isValidPhone(phone)) {
+      return res.status(400).json({ message: invalidPhoneMessage });
     }
 
     const restaurant = await Restaurant.create({
@@ -26,6 +33,9 @@ exports.registerRestaurant = async (req, res) => {
 
     res.status(201).json({ message: "Restaurant created", restaurant });
   } catch (err) {
+    if (err?.name === "ValidationError") {
+      return res.status(400).json({ message: err.errors?.phone ? invalidPhoneMessage : "Invalid restaurant data" });
+    }
     res.status(500).json({ message: err.message });
   }
 };

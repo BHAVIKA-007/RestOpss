@@ -5,15 +5,20 @@ import { useAuth } from '../context/AuthContext'
 import { createRestaurant } from '../services/ownerService'
 import styles from './CreateRestaurant.module.css'
 
+const phoneErrorMessage = 'Phone must contain only digits, spaces, +, -, and parentheses, and include at least 7 digits.'
+const isValidPhone = (phone) => !phone.trim() || (/^[0-9 +()-]+$/.test(phone) && (phone.match(/[0-9]/g) || []).length >= 7)
+
 function CreateRestaurant() {
   const navigate = useNavigate()
   const { refreshUser } = useAuth()
   const [form, setForm] = useState({ name: '', address: '', phone: '' })
   const [error, setError] = useState('')
+  const [phoneError, setPhoneError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
   function handleChange(event) {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }))
+    if (event.target.name === 'phone') setPhoneError('')
   }
 
   async function handleSubmit(event) {
@@ -22,7 +27,12 @@ function CreateRestaurant() {
       setError('Restaurant name is required.')
       return
     }
+    if (!isValidPhone(form.phone)) {
+      setPhoneError(phoneErrorMessage)
+      return
+    }
 
+    setPhoneError('')
     setError('')
     setIsSaving(true)
     try {
@@ -51,7 +61,8 @@ function CreateRestaurant() {
             <label htmlFor="restaurant-address">Address <small>Optional</small></label>
             <input id="restaurant-address" name="address" value={form.address} onChange={handleChange} placeholder="Street, city" />
             <label htmlFor="restaurant-phone">Phone <small>Optional</small></label>
-            <input id="restaurant-phone" name="phone" value={form.phone} onChange={handleChange} placeholder="(555) 010-2040" />
+            <input id="restaurant-phone" name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder="(555) 010-2040" aria-invalid={Boolean(phoneError)} aria-describedby={phoneError ? 'restaurant-phone-error' : undefined} />
+            {phoneError && <p id="restaurant-phone-error" className={styles.error} role="alert">{phoneError}</p>}
             {error && <p className={styles.error} role="alert">{error}</p>}
             <button type="submit" className={styles.submitButton} disabled={isSaving}>{isSaving ? 'Creating...' : 'Create restaurant'}</button>
           </form>

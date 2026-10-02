@@ -26,7 +26,10 @@ const allowHostOrWaiter = (req, res, next) => {
 
 const allowManagerOrHost = (req, res, next) => {
   if (!req.user) return res.status(401).json({ message: "Unauthorized" });
-  if (req.user.role === "host") return next();
+  if (req.user.role === "host") {
+    req.restaurantId = req.user.restaurantId;
+    return next();
+  }
   return isManagerOrOwnerOfRestaurant(req, res, next);
 };
 

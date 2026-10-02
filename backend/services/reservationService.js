@@ -150,7 +150,7 @@ exports.checkTableOverlap = async (tableIds, timeSlot, durationMinutes, excludeR
   return false;
 };
 
-exports.findTableCombinations = async (restaurantId, partySize, timeSlot, durationMinutes, { enforceOvershootCap = false } = {}) => {
+exports.findTableCombinations = async (restaurantId, partySize, timeSlot, durationMinutes, { enforceOvershootCap = false, onlyAvailableTables = false, resultLimit = 3 } = {}) => {
   if (!restaurantId || !partySize || !timeSlot) return [];
 
   const parsedPartySize = Number(partySize);
@@ -159,7 +159,7 @@ exports.findTableCombinations = async (restaurantId, partySize, timeSlot, durati
   const requestedDuration = Number(durationMinutes);
   if (!Number.isFinite(requestedDuration) || requestedDuration <= 0) return [];
 
-  const allTables = await Table.find({ restaurantId }).lean();
+  const allTables = await Table.find({ restaurantId, ...(onlyAvailableTables ? { status: "available" } : {}) }).lean();
   if (!allTables.length) return [];
 
   const freeTables = [];
@@ -180,7 +180,8 @@ exports.findTableCombinations = async (restaurantId, partySize, timeSlot, durati
     combinableTables: combinableFreeTables,
     partySize: parsedPartySize,
     maxTables: 4,
-    overshootCap: enforceOvershootCap ? CUSTOMER_OVERSHOOT_CAP(parsedPartySize) : null
+    overshootCap: enforceOvershootCap ? CUSTOMER_OVERSHOOT_CAP(parsedPartySize) : null,
+    resultLimit
   });
 };
 

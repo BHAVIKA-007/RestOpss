@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import StatusBadge from '../components/StatusBadge'
 import { useSocketEvent } from '../context/SocketContext'
-import { cancelManagerWaitlistEntry, expireManagerWaitlistEntry, getManagerWaitlist } from '../services/managerService'
+import { cancelManagerWaitlistEntry, expireManagerWaitlistEntry, getManagerFloorLayout, getManagerWaitlist, resolveManagerReviewEntry } from '../services/managerService'
 import { seatGuestWaitlistEntry } from '../services/hostService'
 import styles from './ManagerPages.module.css'
 
@@ -17,6 +17,9 @@ function ManagerWaitlist() {
   const [workingId, setWorkingId] = useState('')
   const [error, setError] = useState('')
   const [now, setNow] = useState(() => Date.now())
+  const [reviewEntry, setReviewEntry] = useState(null)
+  const [reviewTables, setReviewTables] = useState([])
+  const [selectedReviewTableIds, setSelectedReviewTableIds] = useState([])
 
   const loadWaitlist = useCallback(async () => {
     try {
@@ -82,6 +85,54 @@ function ManagerWaitlist() {
     }
   }
 
+  async function openReview(entry) {
+    setWorkingId(entry._id)
+    setError('')
+    try {
+      const layout = await getManagerFloorLayout()
+      setReviewTables(layout.tables || [])
+      setSelectedReviewTableIds([])
+      setReviewEntry(entry)
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to load restaurant tables.')
+    } finally {
+      setWorkingId('')
+    }
+  }
+
+  async function resolveReview(decision) {
+    if (!reviewEntry) return
+    if (decision === 'approve' && selectedReviewTableIds.length === 0) {
+      setError('Select at least one table before approving this request.')
+      return
+    }
+    setWorkingId(reviewEntry._id)
+    setError('')
+    try {
+      await resolveManagerReviewEntry(reviewEntry._id, decision, selectedReviewTableIds)
+      setReviewEntry(null)
+      setSelectedReviewTableIds([])
+      await loadWaitlist()
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to resolve this manager-review request.')
+    } finally {
+      setWorkingId('')
+    }
+  }
+
+  async function rejectReviewEntry(entry) {
+    setWorkingId(entry._id)
+    setError('')
+    try {
+      await resolveManagerReviewEntry(entry._id, 'reject')
+      await loadWaitlist()
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to reject this request.')
+    } finally {
+      setWorkingId('')
+    }
+  }
+
   return (
     <div>
       <header className={styles.pageHeading}>
@@ -90,6 +141,21 @@ function ManagerWaitlist() {
         <p>Match open tables to guests, then take the next clear action.</p>
       </header>
       {error && <p className={styles.error} role="alert">{error}</p>}
+      {reviewEntry && <section className={styles.panel}>
+        <h2>Approve party of {reviewEntry.groupSize}</h2>
+        <p>{reviewEntry.customer ? 'Approval creates a confirmed reservation using your selected tables. Standard combination limits are bypassed, but existing reservations at the requested time are still checked.' : 'Approval occupies your selected tables immediately and seats this walk-in.'}</p>
+        <fieldset className={styles.reviewTableChoices}>
+          <legend>Choose tables</legend>
+          {reviewTables.map((table) => <label key={table._id}>
+            <input type="checkbox" checked={selectedReviewTableIds.includes(table._id)} onChange={(event) => setSelectedReviewTableIds((current) => event.target.checked ? [...current, table._id] : current.filter((id) => id !== table._id))} />
+            Table {table.number} · {table.capacity} seats
+          </label>)}
+        </fieldset>
+        <div className={styles.rowActions}>
+          <button type="button" className={styles.smallButton} disabled={workingId === reviewEntry._id} onClick={() => resolveReview('approve')}>{workingId === reviewEntry._id ? 'Approving...' : reviewEntry.customer ? 'Approve and confirm' : 'Approve and seat'}</button>
+          <button type="button" className={styles.smallDanger} disabled={workingId === reviewEntry._id} onClick={() => { setReviewEntry(null); setSelectedReviewTableIds([]) }}>Close</button>
+        </div>
+      </section>}
       <section className={styles.panel}>
         {isLoading ? <p className={styles.status}>Loading waitlist...</p> : entries.length === 0 ? <p className={styles.status}>The waitlist is clear.</p> : (
           <div className={styles.tableWrap}>
@@ -107,10 +173,14 @@ function ManagerWaitlist() {
                       <td>{requestedTimeLabel(entry, now)}</td>
                       <td>{entry.status === 'expired' ? <StatusBadge status="expired" label="Expired" /> : entry.needsManagerReview ? <StatusBadge status="manager_review" label="Needs Manager Decision" /> : <StatusBadge status={entry.status} />}</td>
                       <td><div className={styles.rowActions}>
-                        {hasGuestMatch && <button type="button" className={styles.smallButton} disabled={workingId === entry._id} onClick={() => seatNow(entry)}>{workingId === entry._id ? 'Seating...' : 'Seat Now'}</button>}
+                        {entry.needsManagerReview && <>
+                          <button type="button" className={styles.smallButton} disabled={workingId === entry._id} onClick={() => openReview(entry)}>Choose tables</button>
+                          <button type="button" className={styles.smallDanger} disabled={workingId === entry._id} onClick={() => rejectReviewEntry(entry)}>{workingId === entry._id ? 'Rejecting...' : 'Reject'}</button>
+                        </>}
+                        {!entry.needsManagerReview && hasGuestMatch && <button type="button" className={styles.smallButton} disabled={workingId === entry._id} onClick={() => seatNow(entry)}>{workingId === entry._id ? 'Seating...' : 'Seat Now'}</button>}
                         {entry.status === 'notified' && <small className={styles.status}>Awaiting customer response</small>}
                         {deadlinePassed && <button type="button" className={styles.smallButton} disabled={workingId === entry._id} onClick={() => expire(entry)}>Expire</button>}
-                        <button type="button" className={styles.smallDanger} disabled={workingId === entry._id} onClick={() => cancel(entry)}>{workingId === entry._id ? 'Cancelling...' : 'Cancel'}</button>
+                        {!entry.needsManagerReview && <button type="button" className={styles.smallDanger} disabled={workingId === entry._id} onClick={() => cancel(entry)}>{workingId === entry._id ? 'Cancelling...' : 'Cancel'}</button>}
                       </div></td>
                     </tr>
                   )

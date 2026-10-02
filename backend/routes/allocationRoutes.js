@@ -9,6 +9,7 @@ const {
   getWaitingQueueWithPosition,
   getMyWaitingQueue,
   cancelWaitlistEntry,
+  resolveManagerReview,
   seatGuestWaitlistEntry,
   respondToWaitlistNotification,
   expireWaitlistEntry,
@@ -38,6 +39,7 @@ router.get("/waiting/mine", auth, getMyWaitingQueue);
 router.get("/waiting/position", auth, isManagerOrHost, getWaitingQueueWithPosition);
 
 router.patch("/waiting/:id/cancel", auth, cancelWaitlistEntry);
+router.patch("/waiting/:id/manager-review", auth, isManager, resolveManagerReview);
 router.patch("/waiting/:id/seat", auth, isManagerOrHost, seatGuestWaitlistEntry);
 
 // Respond to a customer notification: accept or decline

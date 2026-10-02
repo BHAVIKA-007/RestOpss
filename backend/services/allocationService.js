@@ -128,11 +128,55 @@ exports.rematchWaitingEntries = async ({ restaurantId, tableIds, tableId, availa
 /*
   NORMAL ALLOCATION
 */
-exports.allocateTableService = async (groupSize, restaurantId, customerId = null, guestName = null, guestPhone = null) => {
+exports.allocateTableService = async (groupSize, restaurantId, customerId = null, guestName = null, guestPhone = null, selectedTableIds = null) => {
   if (!groupSize || groupSize <= 0)
     throw new Error("Invalid group size");
   if (!restaurantId)
     throw new Error("restaurantId required");
+
+  if (Array.isArray(selectedTableIds) && selectedTableIds.length) {
+    const uniqueTableIds = [...new Set(selectedTableIds.map((id) => id.toString()))];
+    const selectedTables = await Table.find({
+      _id: { $in: uniqueTableIds },
+      restaurantId,
+      status: "available"
+    });
+    if (selectedTables.length !== uniqueTableIds.length) {
+      return { status: "combination_unavailable", message: "One or more selected tables are no longer available" };
+    }
+
+    const selectedCandidate = reservationService.buildCombinationCandidates({
+      tables: selectedTables,
+      combinableTables: selectedTables.filter((table) => table.combinable === true),
+      partySize: groupSize,
+      maxTables: 4,
+      resultLimit: Infinity
+    }).find((candidate) => candidate.tableIds.length === uniqueTableIds.length
+      && candidate.tableIds.every((tableId) => uniqueTableIds.includes(tableId)));
+    if (!selectedCandidate || await reservationService.checkTableOverlap(uniqueTableIds, new Date(), await getRestaurantDuration(restaurantId))) {
+      return { status: "combination_unavailable", message: "The selected tables cannot accommodate this party right now" };
+    }
+
+    const combinedGroupId = uniqueTableIds.length > 1 ? new (require("mongoose").Types.ObjectId)() : null;
+    for (const table of selectedTables) {
+      table.status = "occupied";
+      if (combinedGroupId) table.combinedGroupId = combinedGroupId;
+      await table.save();
+      emitToRestaurant(table.restaurantId.toString(), "table:statusChanged", {
+        tableId: table._id.toString(),
+        restaurantId: table.restaurantId.toString(),
+        status: table.status
+      });
+    }
+
+    return {
+      status: "allocated",
+      tableIds: uniqueTableIds,
+      tablesAssigned: selectedTables.map((table) => ({ id: table._id, number: table.number, capacity: table.capacity })),
+      totalCapacity: selectedCandidate.totalCapacity,
+      combinedGroupId
+    };
+  }
 
   // Find smallest available table >= group
   const table = await Table.findOne({
@@ -158,6 +202,18 @@ exports.allocateTableService = async (groupSize, restaurantId, customerId = null
     };
   }
 
+  const requestedDurationMinutes = await getRestaurantDuration(restaurantId);
+  const combinationOptions = (await reservationService.findTableCombinations(
+    restaurantId,
+    groupSize,
+    new Date(),
+    requestedDurationMinutes,
+    { onlyAvailableTables: true, resultLimit: 3 }
+  )).filter((candidate) => candidate.tableCount > 1);
+  if (combinationOptions.length) {
+    return { status: "combination_options", suggestions: combinationOptions };
+  }
+
   // Else → add to waiting queue
     if (customerId) {
       const existingEntry = await WaitingQueue.findOne({
@@ -175,7 +231,6 @@ exports.allocateTableService = async (groupSize, restaurantId, customerId = null
     }
 
   const maximumSeatablePartySize = await reservationService.getRestaurantMaxCapacity(restaurantId);
-  const requestedDurationMinutes = await getRestaurantDuration(restaurantId);
   const needsManagerReview = groupSize > maximumSeatablePartySize;
   const entry = await WaitingQueue.create({
     restaurantId,
@@ -275,7 +330,7 @@ exports.viewWaitingQueue = async (restaurantId) => {
     throw new Error("restaurantId required");
 
   await exports.expireStaleWaitingEntries({ restaurantId });
-  const entries = await WaitingQueue.find({ restaurantId })
+  const entries = await WaitingQueue.find({ restaurantId, status: { $in: ["waiting", "notified"] } })
     .populate("customer", "name")
     .populate("matchedTableIds", "number")
     .populate("reservation", "status timeSlot")
@@ -301,7 +356,7 @@ exports.viewWaitingQueueWithPosition = async (restaurantId) => {
     throw new Error("restaurantId required");
 
   await exports.expireStaleWaitingEntries({ restaurantId });
-  const entries = await WaitingQueue.find({ restaurantId })
+  const entries = await WaitingQueue.find({ restaurantId, status: { $in: ["waiting", "notified"] } })
     .populate("customer", "name")
     .populate("matchedTableIds", "number")
     .populate("reservation", "status timeSlot")

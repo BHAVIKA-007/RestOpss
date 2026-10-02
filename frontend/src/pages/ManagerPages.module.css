@@ -40,6 +40,8 @@
 .reviewRow { background: #fffaf0; }
 .dataTable td:last-child, .dataTable th:last-child { text-align: right; }
 .rowActions { display: flex; justify-content: end; gap: 0.4rem; }
+.reviewTableChoices { display: grid; gap: 0.45rem; margin: 1rem 0; padding: 0.8rem; border: 1px solid var(--color-light-gray); border-radius: 8px; }
+.reviewTableChoices label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; }
 .menuGroups { display: grid; gap: 1rem; }
 .toggle { display: inline-flex; width: 2.2rem; height: 1.25rem; align-items: center; padding: 0.15rem; border: 0; border-radius: 999px; background: #c9c9c9; cursor: pointer; }
 .toggle span { width: 0.95rem; height: 0.95rem; border-radius: 50%; background: var(--color-white); transition: transform 160ms ease; }

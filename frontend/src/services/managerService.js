@@ -64,5 +64,9 @@ export const expireManagerWaitlistEntry = (id) => apiRequest(`/allocation/waitin
   method: 'PATCH',
 })
 export const cancelManagerWaitlistEntry = (id) => apiRequest(`/allocation/waiting/${id}/cancel`, { method: 'PATCH' })
+export const resolveManagerReviewEntry = (id, decision, tableIds = []) => apiRequest(`/allocation/waiting/${id}/manager-review`, {
+  method: 'PATCH',
+  body: JSON.stringify({ decision, tableIds }),
+})
 
 export const getManagerKitchenQueue = () => apiRequest('/kitchen')

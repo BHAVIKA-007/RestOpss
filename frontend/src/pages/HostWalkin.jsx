@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { allocateWalkIn, getHostFloorLayout, suggestCombination } from '../services/hostService'
+import { allocateWalkIn, getHostFloorLayout } from '../services/hostService'
 import styles from './HostPages.module.css'
 
 function HostWalkin() {
@@ -11,6 +11,7 @@ function HostWalkin() {
   const [guestName, setGuestName] = useState('')
   const [guestPhone, setGuestPhone] = useState('')
   const [suggestion, setSuggestion] = useState(null)
+  const [combinationOptions, setCombinationOptions] = useState([])
   const [result, setResult] = useState(null)
   const [tables, setTables] = useState([])
   const [error, setError] = useState('')
@@ -29,15 +30,6 @@ function HostWalkin() {
     setError('')
     setResult(null)
     setIsSubmitting(true)
-    const timeSlot = new Date().toISOString()
-
-    try {
-      const proposed = await suggestCombination({ restaurantId: user.restaurantId, partySize: groupSize, timeSlot })
-      setSuggestion(proposed.suggestions || [])
-    } catch (requestError) {
-      setSuggestion(null)
-      setError(requestError.message || 'Unable to load a table suggestion.')
-    }
 
     try {
       const allocation = await allocateWalkIn({
@@ -46,6 +38,10 @@ function HostWalkin() {
         ...(guestName.trim() ? { guestName: guestName.trim() } : {}),
         ...(guestPhone.trim() ? { guestPhone: guestPhone.trim() } : {}),
       })
+      if (allocation.status === 'combination_options') {
+        setCombinationOptions(allocation.suggestions || [])
+        return
+      }
       const assignedTable = tables.find((table) => String(table._id) === String(allocation.tableId))
       setResult({ ...allocation, tableNumber: assignedTable?.number })
     } catch (requestError) {
@@ -55,9 +51,27 @@ function HostWalkin() {
     }
   }
 
-  const suggestionText = Array.isArray(suggestion)
-    ? suggestion.map((item) => item.tableIds.join(' + ')).join(', ')
-    : suggestion?.preferredTableId ? `Table ${suggestion.preferredTableId}` : ''
+  async function seatCombination(tableIds) {
+    setError('')
+    setIsSubmitting(true)
+    try {
+      const allocation = await allocateWalkIn({
+        restaurantId: user.restaurantId,
+        groupSize: Number(groupSize),
+        tableIds,
+        ...(guestName.trim() ? { guestName: guestName.trim() } : {}),
+        ...(guestPhone.trim() ? { guestPhone: guestPhone.trim() } : {}),
+      })
+      setResult(allocation)
+      setCombinationOptions([])
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to seat this walk-in.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const suggestionText = suggestion?.preferredTableId ? `Table ${suggestion.preferredTableId}` : ''
 
   return (
     <div>
@@ -86,7 +100,7 @@ function HostWalkin() {
           </form>
         ) : (
           <div className={styles.result}>
-            <h2>{result.status === 'allocated' ? `Table ${result.tableNumber ?? result.tableId} is ready.` : result.status === 'waiting' ? 'Guest joined the waitlist.' : 'Manager attention needed.'}</h2>
+            <h2>{result.status === 'allocated' ? result.tablesAssigned?.length ? `Tables ${result.tablesAssigned.map((table) => table.number).join(' + ')} are ready.` : `Table ${result.tableNumber ?? result.tableId} is ready.` : result.status === 'waiting' ? 'Guest joined the waitlist.' : 'Manager attention needed.'}</h2>
             <p>{result.status === 'waiting' ? `They are position ${result.position || 'in the queue'}.` : result.message || 'The allocator could not complete this seating.'}</p>
             <div className={styles.actionRow}>
               <Link to="/host/floor" className={styles.primaryButton}>Back to floor</Link>
@@ -94,6 +108,16 @@ function HostWalkin() {
             </div>
           </div>
         )}
+        {!result && combinationOptions.length > 0 && <div className={styles.result}>
+          <h2>Choose tables to seat this party</h2>
+          <p>The selected combination will be occupied immediately.</p>
+          <div className={styles.actionRow}>{combinationOptions.map((option) => {
+            const tableNumbers = option.tableIds.map((tableId) => tables.find((table) => String(table._id) === String(tableId))?.number ?? tableId)
+            return <button key={option.tableIds.join('-')} type="button" className={styles.secondaryButton} disabled={isSubmitting} onClick={() => seatCombination(option.tableIds)}>
+              {isSubmitting ? 'Seating...' : `Seat at Tables ${tableNumbers.join(' + ')}`}
+            </button>
+          })}</div>
+        </div>}
         {suggestion && !result && suggestionText && <p className={styles.caption}>Suggested combination: {suggestionText}</p>}
       </section>
     </div>

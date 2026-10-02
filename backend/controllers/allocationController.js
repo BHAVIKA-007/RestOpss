@@ -22,7 +22,7 @@ const WAITLIST_DUPLICATE_WINDOW_MS = 30 * 60 * 1000;
 
 exports.allocateTable = async (req, res) => {
   try {
-    const { groupSize, guestName, guestPhone } = req.body;
+    const { groupSize, guestName, guestPhone, tableIds } = req.body;
     const restaurantId = req.user.restaurantId;
 
     if (!restaurantId) {
@@ -30,7 +30,8 @@ exports.allocateTable = async (req, res) => {
     }
 
     const staffCreated = ["manager", "waiter", "host"].includes(req.user.role);
-    const result = await allocateTableService(groupSize, restaurantId, staffCreated ? null : req.user._id, guestName, guestPhone);
+    const result = await allocateTableService(groupSize, restaurantId, staffCreated ? null : req.user._id, guestName, guestPhone, tableIds);
+    if (result.status === "combination_unavailable") return res.status(409).json(result);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -74,6 +75,22 @@ exports.joinWaitlist = async (req, res) => {
     if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
     if (!Number.isFinite(Number(restaurant.defaultSeatingDurationMinutes))) {
       return res.status(500).json({ message: "Restaurant seating duration is required" });
+    }
+
+    const combinationSuggestions = await reservationService.findTableCombinations(
+      restaurantId,
+      parsedGroupSize,
+      parsedTimeSlot,
+      Number(restaurant.defaultSeatingDurationMinutes),
+      { enforceOvershootCap: true, resultLimit: Infinity }
+    );
+    const availableCombination = combinationSuggestions.find((suggestion) => suggestion.tableIds.length > 1);
+    if (availableCombination) {
+      return res.status(409).json({
+        status: "combination_available",
+        suggestions: combinationSuggestions.filter((suggestion) => suggestion.tableIds.length > 1),
+        message: "A combined-table option is available. Select it from the booking options to request host approval."
+      });
     }
 
     await expireStaleWaitingEntries({ restaurantId, customerId: req.user._id });
@@ -197,6 +214,88 @@ exports.cancelWaitlistEntry = async (req, res) => {
     }
     return res.json({ success: true, message: "Waitlist entry cancelled", entry });
   } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+exports.resolveManagerReview = async (req, res) => {
+  try {
+    const entry = await WaitingQueue.findById(req.params.id);
+    if (!entry) return res.status(404).json({ error: "Waitlist entry not found" });
+    if (req.user.role !== "manager" || req.user.restaurantId?.toString() !== entry.restaurantId.toString()) {
+      return res.status(403).json({ error: "Only this restaurant's manager can resolve manager-review entries" });
+    }
+    if (!entry.needsManagerReview || entry.status !== "waiting") {
+      return res.status(400).json({ error: "This entry is not awaiting manager review" });
+    }
+
+    const { decision, tableIds } = req.body;
+    if (decision === "reject") {
+      entry.status = "cancelled";
+      await entry.save();
+      emitToRestaurant(entry.restaurantId.toString(), "waitlist:cancelled", { waitingQueueId: entry._id.toString() });
+      return res.json({ success: true, message: "Waitlist request rejected", entry });
+    }
+    if (decision !== "approve") return res.status(400).json({ error: "decision must be approve or reject" });
+    if (!Array.isArray(tableIds) || !tableIds.length || new Set(tableIds.map((id) => id.toString())).size !== tableIds.length) {
+      return res.status(400).json({ error: "Select one or more distinct tables to approve this request" });
+    }
+
+    const isWalkIn = !entry.customer;
+    const tableFilter = { _id: { $in: tableIds }, restaurantId: entry.restaurantId };
+    if (isWalkIn) tableFilter.status = "available";
+    const tables = await Table.find(tableFilter);
+    if (tables.length !== tableIds.length) return res.status(409).json({ error: "One or more selected tables are unavailable" });
+    if (await reservationService.checkTableOverlap(tableIds, entry.requestedTimeSlot, entry.requestedDurationMinutes)) {
+      return res.status(409).json({ error: "The selected tables are already reserved for that time" });
+    }
+
+    let reservation = null;
+    if (entry.customer) {
+      reservation = await Reservation.create({
+        restaurantId: entry.restaurantId,
+        customer: entry.customer,
+        tables: tableIds,
+        partySize: entry.groupSize,
+        timeSlot: entry.requestedTimeSlot,
+        durationMinutes: entry.requestedDurationMinutes,
+        status: "confirmed",
+        requiresApproval: false,
+        lockedTableSlots: Reservation.getLockedTableSlots({
+          tables: tableIds,
+          timeSlot: entry.requestedTimeSlot,
+          durationMinutes: entry.requestedDurationMinutes
+        })
+      });
+      entry.reservation = reservation._id;
+      emitToRestaurant(entry.restaurantId.toString(), "reservation:confirmed", {
+        reservationId: reservation._id.toString(),
+        restaurantId: entry.restaurantId.toString(),
+        tableIds: tableIds.map((tableId) => tableId.toString()),
+        timeSlot: reservation.timeSlot
+      });
+    } else {
+      for (const table of tables) {
+        table.status = "occupied";
+        await table.save();
+        emitToRestaurant(table.restaurantId.toString(), "table:statusChanged", {
+          tableId: table._id.toString(),
+          restaurantId: table.restaurantId.toString(),
+          status: table.status
+        });
+      }
+    }
+
+    entry.matchedTableIds = tableIds;
+    entry.status = "allocated";
+    await entry.save();
+    emitToRestaurant(entry.restaurantId.toString(), "waitlist:allocated", {
+      waitingQueueId: entry._id.toString(),
+      reservationId: reservation?._id.toString() || null
+    });
+    return res.json({ success: true, message: reservation ? "Reservation approved and confirmed" : "Walk-in guest seated", entry, reservation });
+  } catch (err) {
+    if (err?.code === 11000) return res.status(409).json({ error: "Those tables were just booked; select another combination" });
     return res.status(500).json({ error: err.message });
   }
 };

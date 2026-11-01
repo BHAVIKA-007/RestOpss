@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import StatusBadge from '../components/StatusBadge'
-import { useSocketEvent } from '../context/SocketContext'
+import { useSocket, useSocketEvent } from '../context/SocketContext'
 import { confirmReservation, getMyReservations } from '../services/reservationService'
 import { formatDateTime, getCustomerFacingStatusLabel, getId } from '../utils/formatters'
 import styles from './ReservationConfirm.module.css'
@@ -13,6 +13,7 @@ function ReservationConfirm() {
   const navigate = useNavigate()
   const location = useLocation()
   const timing = useTiming()
+  const { joinRestaurantRoom } = useSocket()
   const [reservation, setReservation] = useState(null)
   const [restaurantName, setRestaurantName] = useState('Your restaurant')
   const [secondsLeft, setSecondsLeft] = useState(null)
@@ -33,6 +34,11 @@ function ReservationConfirm() {
     loadReservation().catch((requestError) => setError(requestError.message)).finally(() => setIsLoading(false))
   }, [loadReservation])
 
+  const restaurantId = getId(reservation?.restaurantId)
+  useEffect(() => {
+    if (restaurantId) joinRestaurantRoom(restaurantId)
+  }, [joinRestaurantRoom, restaurantId])
+
   const handleApproval = useCallback((event) => {
     if (event.reservationId !== id) return
 
@@ -41,7 +47,13 @@ function ReservationConfirm() {
       : current)
   }, [id])
 
+  const handleExpired = useCallback((event) => {
+    if (event.reservationId !== id) return
+    setReservation((current) => current ? { ...current, status: 'expired' } : current)
+  }, [id])
+
   useSocketEvent('reservation:approved', handleApproval)
+  useSocketEvent('reservation:expired', handleExpired)
 
   useEffect(() => {
     if (!reservation?.lockExpiresAt) return undefined
@@ -59,9 +71,14 @@ function ReservationConfirm() {
       if (preOrder.length > 0) sessionStorage.setItem(`preOrder:${id}`, JSON.stringify(preOrder))
       navigate('/reservations/mine', { replace: true })
     } catch (requestError) {
-      setError(requestError.status === 409 || requestError.message.toLowerCase().includes('booked')
-        ? 'This table was just booked by someone else. Please try a different table or time.'
-        : requestError.message)
+      if (requestError.status === 410) {
+        setReservation((current) => current ? { ...current, status: 'expired' } : current)
+        setError('')
+      } else {
+        setError(requestError.status === 409 || requestError.message.toLowerCase().includes('booked')
+          ? 'This table was just booked by someone else. Please try a different table or time.'
+          : requestError.message)
+      }
     } finally {
       setIsConfirming(false)
     }
@@ -70,8 +87,8 @@ function ReservationConfirm() {
   if (isLoading) return <div className="routeLoading">Loading your reservation...</div>
   if (error && !reservation) return <div className={styles.page}><NavBar /><main className={styles.center}><h1>Reservation not found</h1><p>{error}</p><Link to="/restaurants">Back to restaurants</Link></main></div>
 
-  const expired = secondsLeft === 0
   const requiresApproval = reservation.requiresApproval
+  const expired = reservation.status === 'expired' || (!requiresApproval && secondsLeft === 0)
   const preOrder = location.state?.preOrder || []
 
   return (
@@ -82,7 +99,7 @@ function ReservationConfirm() {
         <h1>Hold your table.</h1>
         <p className={styles.intro}>{restaurantName}</p>
         <section className={styles.card}>
-          <div className={styles.cardTop}><span>Reservation details</span><StatusBadge status={reservation.status} label={getCustomerFacingStatusLabel(reservation.status, reservation.timeSlot, reservation.lockExpiresAt)} /></div>
+          <div className={styles.cardTop}><span>Reservation details</span><StatusBadge status={reservation.status} label={getCustomerFacingStatusLabel(reservation.status, reservation.timeSlot, reservation.lockExpiresAt, undefined, reservation.requiresApproval)} /></div>
           <dl><div><dt>When</dt><dd>{formatDateTime(reservation.timeSlot)}</dd></div><div><dt>Party</dt><dd>{reservation.partySize} guests</dd></div><div><dt>Tables</dt><dd>{reservation.tables.map((table) => getId(table)).join(', ')}</dd></div></dl>
         </section>
         {timing && <p className={styles.graceNote}>Please arrive within {timing.noShowGraceMinutes} minutes of your reservation time - tables may be released to other guests after that.</p>}

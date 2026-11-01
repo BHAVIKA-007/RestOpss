@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import FloorPlanGrid from '../components/FloorPlanGrid/FloorPlanGrid'
 import { useAuth } from '../context/AuthContext'
-import { useSocketEvent } from '../context/SocketContext'
+import { useSocket, useSocketEvent } from '../context/SocketContext'
 import { approveManagerReservation, getManagerFloorLayout, getManagerReservations, rejectManagerReservation } from '../services/managerService'
 import styles from './ManagerPages.module.css'
 
@@ -9,6 +9,7 @@ function reservationTableIds(reservation) { return (reservation.tables || []).ma
 
 function ManagerApprovals() {
   const { user } = useAuth()
+  const { joinRestaurantRoom } = useSocket()
   const isHostView = user?.role === 'host'
   const [approvals, setApprovals] = useState([])
   const [floor, setFloor] = useState({ tables: [], elements: [] })
@@ -19,12 +20,17 @@ function ManagerApprovals() {
   const loadApprovals = useCallback(async () => {
     try { setApprovals(await getManagerReservations({ requiresApproval: 'true', status: ['locked'] })); setError('') } catch (requestError) { setError(requestError.message || 'Unable to load approvals.') } finally { setIsLoading(false) }
   }, [])
+  const handleExpired = useCallback((event) => {
+    setApprovals((current) => current.filter((reservation) => reservation._id !== event.reservationId))
+  }, [])
 
   useEffect(() => {
+    if (user?.restaurantId) joinRestaurantRoom(user.restaurantId)
     loadApprovals()
     getManagerFloorLayout().then(setFloor).catch(() => {})
-  }, [loadApprovals])
+  }, [joinRestaurantRoom, loadApprovals, user?.restaurantId])
   useSocketEvent('reservation:approvalNeeded', loadApprovals)
+  useSocketEvent('reservation:expired', handleExpired)
 
   async function handleDecision(id, approve) {
     setWorkingId(id)

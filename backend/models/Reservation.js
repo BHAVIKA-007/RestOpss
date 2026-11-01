@@ -69,7 +69,7 @@ const reservationSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ["locked", "confirmed", "seated", "completed", "cancelled", "no_show"],
+    enum: ["locked", "confirmed", "seated", "completed", "cancelled", "no_show", "expired"],
     default: "locked"
   },
 
@@ -79,6 +79,11 @@ const reservationSchema = new mongoose.Schema({
   },
 
   lockExpiresAt: {
+    type: Date,
+    default: null
+  },
+
+  expiredAt: {
     type: Date,
     default: null
   },
@@ -107,6 +112,10 @@ reservationSchema.pre("save", function () {
 reservationSchema.index(
   { lockedTableSlots: 1 },
   { unique: true, partialFilterExpression: { lockedTableSlots: { $exists: true, $ne: [] } } }
+);
+reservationSchema.index(
+  { lockExpiresAt: 1 },
+  { partialFilterExpression: { status: "locked" } }
 );
 
 module.exports = mongoose.model("Reservation", reservationSchema);

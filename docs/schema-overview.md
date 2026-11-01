@@ -86,19 +86,22 @@ This describes the eight Mongoose models in `backend/models` and the behavior wi
 | `partySize` | Number | Yes | — | Number of guests; minimum 1. |
 | `timeSlot` | Date | Yes | — | Reservation start time. |
 | `durationMinutes` | Number | Yes | — | Reservation duration; no schema minimum is declared. |
-| `status` | String | No | `"locked"` | One of `locked`, `confirmed`, `seated`, `completed`, `cancelled`, `no_show`. |
+| `status` | String | No | `"locked"` | One of `locked`, `confirmed`, `seated`, `completed`, `cancelled`, `no_show`, `expired`. |
 | `requiresApproval` | Boolean | No | `false` | Whether a multi-table booking awaits staff approval. |
 | `lockExpiresAt` | Date | No | `null` | Expiry time for the temporary booking lock. |
+| `expiredAt` | Date | No | `null` | Time when the background sweep marked an abandoned lock expired. |
 | `lockedTableSlots` | Array of String | No | `[]` | 15-minute time-bucket keys used by a unique partial index to prevent confirmed/seated reservations from claiming the same table bucket. |
 | `createdAt` | Date | No | `Date.now` | Document creation time. |
 
 **Indexes:**
 - Unique multikey `{ lockedTableSlots: 1 }` with partial filter `{ lockedTableSlots: { $exists: true, $ne: [] } }`: no two indexed reservation documents may contain the same nonempty slot key. A slot key is `<tableId>_<bucketStartMs>`.
-- There are no schema indexes directly on `restaurantId`, `customer`, `tables`, `status`, or `timeSlot`.
+- `{ lockExpiresAt: 1 }` with partial filter `{ status: "locked" }`: supports the scheduled locked-reservation expiry sweep; Mongoose creates it on the next server start.
+- There are no other schema indexes directly on `restaurantId`, `customer`, `tables`, `status`, or `timeSlot`.
 
 **Hooks, statics, methods:**
 - `getLockedTableSlots({ tables, timeSlot, durationMinutes })`: creates the set of 15-minute UTC-epoch-aligned buckets intersected by each table's reservation interval. It returns `[]` for no tables and throws if duration is not finite/positive. The end boundary is exclusive (calculated using `endMs - 1`).
 - `pre("save")`: clears `lockedTableSlots` unless status is `confirmed` or `seated`. It does not populate the field for those statuses and does not itself enforce that the array is nonempty.
+- A scheduled background sweep changes abandoned `locked` reservations to `expired`, records `expiredAt`, and clears `lockedTableSlots`; approval-required locks receive a longer grace period. Expiry is also checked on demand when a customer confirms.
 
 ### Order
 

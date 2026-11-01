@@ -18,11 +18,12 @@ const customerReservationStatusLabels = {
   seated: 'Seated',
   completed: 'Completed',
   cancelled: 'Cancelled',
-  no_show: 'No Show'
+  no_show: 'No Show',
+  expired: 'Expired'
 }
 
-export function getCustomerFacingStatusLabel(status, timeSlot, lockExpiresAt, durationMinutes) {
-  if (status === 'locked' && [timeSlot, lockExpiresAt].some((value) => value && new Date(value).getTime() < Date.now())) {
+export function getCustomerFacingStatusLabel(status, timeSlot, lockExpiresAt, durationMinutes, requiresApproval = false) {
+  if (status === 'locked' && !requiresApproval && [timeSlot, lockExpiresAt].some((value) => value && new Date(value).getTime() < Date.now())) {
     return 'Expired'
   }
 

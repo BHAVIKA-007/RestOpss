@@ -8,7 +8,7 @@ const { rematchWaitingEntries } = require("../services/allocationService");
 const { RESERVATION_LEAD_TIME_MS, SEATING_BUFFER_MS, NO_SHOW_GRACE_MS, noShowGraceMinutes } = require("../config/timing");
 
 const LOCK_DURATION_MS = 10 * 60 * 1000;
-const reservationStatuses = new Set(["locked", "confirmed", "seated", "completed", "cancelled", "no_show"]);
+const reservationStatuses = new Set(["locked", "confirmed", "seated", "completed", "cancelled", "no_show", "expired"]);
 
 const getDateRange = (date) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
@@ -178,13 +178,17 @@ exports.confirmReservation = async (req, res) => {
       return res.status(403).json({ message: "Only the reserving customer can confirm this reservation" });
     }
 
+    if (reservation.status === "expired") {
+      return res.status(410).json({ message: "Reservation lock expired; please create a new reservation" });
+    }
+
     if (reservation.requiresApproval && reservation.status === "locked") {
       return res.status(403).json({ message: "This booking requires host approval before it can be confirmed" });
     }
 
     if (reservation.status !== "locked") return res.status(400).json({ message: "Reservation is not in locked state" });
 
-    if (!reservation.lockExpiresAt || reservation.lockExpiresAt.getTime() < Date.now()) {
+    if (!reservation.lockExpiresAt || reservation.lockExpiresAt.getTime() <= Date.now()) {
       return res.status(410).json({ message: "Reservation lock expired; please create a new reservation" });
     }
 
@@ -230,6 +234,10 @@ exports.approveReservation = async (req, res) => {
     const reservation = await Reservation.findById(req.params.id);
     if (!reservation) return res.status(404).json({ message: "Reservation not found" });
 
+    if (reservation.status === "expired") {
+      return res.status(400).json({ message: "Expired reservations cannot be approved" });
+    }
+
     if (!reservation.requiresApproval) {
       return res.status(400).json({ message: "This reservation does not require approval" });
     }
@@ -270,6 +278,10 @@ exports.rejectReservation = async (req, res) => {
   try {
     const reservation = await Reservation.findById(req.params.id);
     if (!reservation) return res.status(404).json({ message: "Reservation not found" });
+
+    if (reservation.status === "expired") {
+      return res.status(400).json({ message: "Expired reservations cannot be rejected" });
+    }
 
     if (!reservation.requiresApproval) {
       return res.status(400).json({ message: "This reservation does not require approval" });
@@ -362,6 +374,10 @@ exports.cancelReservation = async (req, res) => {
 
     if (!isCustomer && !isManagerOrHostOfRestaurant) return res.status(403).json({ message: "Not authorized to cancel this reservation" });
 
+    if (reservation.status === "expired") {
+      return res.status(400).json({ message: "Expired reservations cannot be cancelled" });
+    }
+
     if (["completed", "cancelled", "no_show"].includes(reservation.status)) {
       return res.status(400).json({ message: "Cannot cancel a reservation that is already completed, cancelled or marked no-show" });
     }
@@ -414,6 +430,7 @@ exports.seatReservation = async (req, res) => {
 
     if (!ensureSameRestaurant(req, reservation)) return res.status(403).json({ message: "Cannot operate on reservations for another restaurant" });
 
+    if (reservation.status === "expired") return res.status(400).json({ message: "Expired reservations cannot be seated" });
     if (reservation.status !== "confirmed") return res.status(400).json({ message: "Only confirmed reservations can be seated" });
 
     const earliestSeatingTime = new Date(reservation.timeSlot).getTime() - SEATING_BUFFER_MS;
@@ -453,6 +470,7 @@ exports.completeReservation = async (req, res) => {
 
     if (!ensureSameRestaurant(req, reservation)) return res.status(403).json({ message: "Cannot operate on reservations for another restaurant" });
 
+    if (reservation.status === "expired") return res.status(400).json({ message: "Expired reservations cannot be completed" });
     if (reservation.status !== "seated") return res.status(400).json({ message: "Only seated reservations can be completed" });
 
     reservation.status = "completed";
@@ -492,6 +510,7 @@ exports.markNoShow = async (req, res) => {
 
     if (!ensureSameRestaurant(req, reservation)) return res.status(403).json({ message: "Cannot operate on reservations for another restaurant" });
 
+    if (reservation.status === "expired") return res.status(400).json({ message: "Expired reservations cannot be marked no-show" });
     if (reservation.status !== "confirmed") return res.status(400).json({ message: "Only confirmed reservations can be marked no-show" });
 
     const allowedAt = new Date(new Date(reservation.timeSlot).getTime() + NO_SHOW_GRACE_MS);

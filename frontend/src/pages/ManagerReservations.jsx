@@ -6,7 +6,7 @@ import { getEarliestSeatingTime, isSeatingAvailable, markNoShowReservation, seat
 import styles from './ManagerPages.module.css'
 import { useTiming } from '../context/TimingContext'
 
-const statusOptions = ['locked', 'confirmed', 'seated', 'completed', 'cancelled', 'no_show']
+const statusOptions = ['locked', 'confirmed', 'seated', 'completed', 'cancelled', 'no_show', 'expired']
 
 function ManagerReservations() {
   const location = useLocation()

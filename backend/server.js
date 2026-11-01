@@ -4,6 +4,7 @@ const express = require("express");
 const http = require("http");
 const connectDB = require("./config/db");
 const { initSocket } = require("./services/socketService");
+const { startBackgroundJobs, stopBackgroundJobs } = require("./jobs");
 const userRoutes = require("./routes/userRoutes");
 const tableRoutes = require("./routes/tableRoutes");
 const orderRoutes = require("./routes/orderRoutes");
@@ -20,9 +21,6 @@ const app = express();
 const server = http.createServer(app);
 
 app.use(express.json());
-
-// connect to DB
-connectDB();
 
 app.use("/api/users", userRoutes);
 app.use("/api/tables", tableRoutes);
@@ -44,7 +42,21 @@ app.get("/api/load-test", (req, res) => {
     res.status(200).json({ ok: true });
 });
 
-initSocket(server);
-
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+const startServer = async () => {
+  await connectDB();
+  initSocket(server);
+  startBackgroundJobs();
+  server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+};
+
+const shutdown = () => {
+  stopBackgroundJobs();
+  server.close(() => process.exit(0));
+};
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
+
+startServer();

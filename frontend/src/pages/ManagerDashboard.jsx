@@ -89,6 +89,7 @@ function ManagerDashboard() {
   const handleLiveUpdate = useCallback(() => { loadSnapshot() }, [loadSnapshot])
   useSocketEvent('table:statusChanged', handleLiveUpdate)
   useSocketEvent('reservation:approvalNeeded', handleLiveUpdate)
+  useSocketEvent('reservation:expired', handleLiveUpdate)
   useSocketEvent('waitlist:notified', handleLiveUpdate)
 
   return (
